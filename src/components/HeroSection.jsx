@@ -3,92 +3,106 @@ import { Link } from 'react-router-dom';
 
 const HeroSection = () => {
   return (
-    <section className="bg-gradient-to-br from-primary-50 to-secondary-50 py-20 px-4 overflow-hidden">
-      <div className="max-w-4xl mx-auto text-center">
-        {/* Título con animación de entrada */}
-        <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight animate-fade-in-up">
-          Conecta con el{' '}
-          <span className="text-primary-600 animate-pulse-slow">psicólogo ideal</span>
-          {' '}para ti
-        </h1>
-        
-        {/* Subtítulo con animación de entrada */}
-        <p className="text-xl md:text-2xl text-gray-600 mb-12 max-w-2xl mx-auto leading-relaxed animate-fade-in-up animation-delay-200">
-          Encuentra el profesional de salud mental que mejor se adapte a tus necesidades 
-          y comienza tu camino hacia el bienestar emocional.
-        </p>
-        
-        {/* Botones con animaciones */}
-        <div className="flex flex-col md:flex-row gap-6 justify-center items-center mb-12">
-          <Link
-            to="/login"
-            className="w-full md:w-80 bg-primary-600 hover:bg-primary-700 text-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-500 transform hover:-translate-y-2 hover:scale-105 text-center animate-fade-in-up animation-delay-400 group"
-          >
-            <div className="flex flex-col items-center">
-              <svg className="w-12 h-12 mb-4 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-              </svg>
-              <h3 className="text-xl font-bold mb-2 transition-colors duration-300">Iniciar Sesión</h3>
-              <p className="text-primary-100 text-sm transition-colors duration-300">Accede a tu cuenta existente</p>
+    <div className="relative bg-gradient-to-br from-primary-600 via-primary-700 to-primary-800 min-h-screen flex items-center">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 opacity-10">
+        <div className="absolute top-20 left-20 w-32 h-32 bg-white rounded-full"></div>
+        <div className="absolute top-40 right-32 w-24 h-24 bg-white rounded-full"></div>
+        <div className="absolute bottom-32 left-1/4 w-16 h-16 bg-white rounded-full"></div>
+        <div className="absolute bottom-20 right-20 w-20 h-20 bg-white rounded-full"></div>
+      </div>
+
+      <div className="container mx-auto px-6 py-16 relative z-10">
+        <div className="grid lg:grid-cols-2 gap-12 items-center">
+          {/* Content */}
+          <div className="text-white">
+            <h1 className="text-5xl lg:text-6xl font-bold mb-6 leading-tight">
+              Encuentra el apoyo
+              <span className="block text-primary-200">psicológico que necesitas</span>
+            </h1>
+            
+            <p className="text-xl mb-8 text-primary-100 leading-relaxed">
+              Conectamos a personas con profesionales de la salud mental certificados. 
+              Recibe atención personalizada y de calidad desde la comodidad de tu hogar.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-4 mb-8">
+              <Link
+                to="/crear-cuenta"
+                className="bg-white text-primary-700 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-primary-50 transition-all duration-300 transform hover:scale-105 shadow-lg"
+              >
+                Comenzar Ahora
+              </Link>
+              <Link
+                to="/login"
+                className="border-2 border-white text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-white hover:text-primary-700 transition-all duration-300 transform hover:scale-105"
+              >
+                ¿Ya tienes una cuenta?
+              </Link>
             </div>
-          </Link>
-          
-          <Link
-            to="/crear-cuenta"
-            className="w-full md:w-80 bg-secondary-600 hover:bg-secondary-700 text-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-500 transform hover:-translate-y-2 hover:scale-105 text-center animate-fade-in-up animation-delay-600 group"
-          >
-            <div className="flex flex-col items-center">
-              <svg className="w-12 h-12 mb-4 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-              </svg>
-              <h3 className="text-xl font-bold mb-2 transition-colors duration-300">Crear Cuenta</h3>
-              <p className="text-secondary-100 text-sm transition-colors duration-300">Regístrate y comienza tu viaje</p>
+
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-6">
+              <div className="text-center">
+                <div className="text-3xl font-bold text-primary-200">500+</div>
+                <div className="text-sm text-primary-100">Profesionales</div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-primary-200">10k+</div>
+                <div className="text-sm text-primary-100">Pacientes</div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-primary-200">98%</div>
+                <div className="text-sm text-primary-100">Satisfacción</div>
+              </div>
             </div>
-          </Link>
-        </div>
-        
-        {/* Badge de confidencialidad con animación */}
-        <div className="flex items-center justify-center space-x-2 text-gray-500 mb-12 animate-fade-in-up animation-delay-800">
-          <svg className="w-5 h-5 animate-bounce-slow" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-          </svg>
-          <span className="text-sm">100% Confidencial</span>
-        </div>
-        
-        {/* Características con animaciones escalonadas */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="text-center animate-fade-in-up animation-delay-1000 group">
-            <div className="bg-white rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4 shadow-md transition-all duration-300 group-hover:shadow-lg group-hover:scale-110">
-              <svg className="w-8 h-8 text-primary-600 transition-transform duration-300 group-hover:rotate-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2 transition-colors duration-300">Evaluación Personalizada</h3>
-            <p className="text-gray-600 transition-colors duration-300">Análisis detallado de tus necesidades específicas</p>
           </div>
-          
-          <div className="text-center animate-fade-in-up animation-delay-1200 group">
-            <div className="bg-white rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4 shadow-md transition-all duration-300 group-hover:shadow-lg group-hover:scale-110">
-              <svg className="w-8 h-8 text-primary-600 transition-transform duration-300 group-hover:rotate-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
+
+          {/* Image/Illustration */}
+          <div className="hidden lg:block">
+            <div className="relative">
+              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20">
+                <div className="text-center">
+                  <div className="w-24 h-24 bg-primary-200 rounded-full mx-auto mb-6 flex items-center justify-center">
+                    <svg className="w-12 h-12 text-primary-700" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-semibold text-white mb-2">
+                    Atención Personalizada
+                  </h3>
+                  <p className="text-primary-100">
+                    Nuestros profesionales están aquí para ayudarte en tu camino hacia el bienestar mental.
+                  </p>
+                </div>
+              </div>
+              
+              {/* Floating elements */}
+              <div className="absolute -top-4 -right-4 bg-primary-200 rounded-full p-3">
+                <svg className="w-6 h-6 text-primary-700" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="absolute -bottom-4 -left-4 bg-primary-300 rounded-full p-3">
+                <svg className="w-6 h-6 text-primary-700" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z" />
+                  <path d="M15 7v2a4 4 0 01-4 4H9.828l-1.766 1.767c.28.149.599.233.938.233h2l3 3v-3h2a2 2 0 002-2V9a2 2 0 00-2-2h-1z" />
+                </svg>
+              </div>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2 transition-colors duration-300">Psicólogos Verificados</h3>
-            <p className="text-gray-600 transition-colors duration-300">Profesionales certificados y con experiencia</p>
-          </div>
-          
-          <div className="text-center animate-fade-in-up animation-delay-1400 group">
-            <div className="bg-white rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4 shadow-md transition-all duration-300 group-hover:shadow-lg group-hover:scale-110">
-              <svg className="w-8 h-8 text-primary-600 transition-transform duration-300 group-hover:rotate-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2 transition-colors duration-300">Sesiones Flexibles</h3>
-            <p className="text-gray-600 transition-colors duration-300">Presenciales o virtuales según tu preferencia</p>
           </div>
         </div>
       </div>
-    </section>
+
+      {/* Scroll indicator */}
+      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2">
+        <div className="animate-bounce">
+          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+          </svg>
+        </div>
+      </div>
+    </div>
   );
 };
 

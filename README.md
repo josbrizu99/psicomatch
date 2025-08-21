@@ -47,12 +47,21 @@ psicomatch/
 │   │   ├── Navbar.jsx          # Barra de navegación principal
 │   │   ├── HeroSection.jsx     # Sección principal de la página de inicio
 │   │   ├── QuickAccess.jsx     # Sección de acceso rápido
-│   │   └── Footer.jsx          # Pie de página
+│   │   ├── Footer.jsx          # Pie de página
+│   │   └── admin/              # Componentes del panel de administración
+│   │       ├── AdminSidebar.jsx        # Navegación lateral del admin
+│   │       ├── DashboardHome.jsx       # Página principal del dashboard
+│   │       ├── ManageProfessionals.jsx # Gestión de profesionales
+│   │       ├── ManageUsers.jsx         # Gestión de usuarios
+│   │       ├── ManageTests.jsx         # Gestión de tests psicológicos
+│   │       ├── ManageReports.jsx       # Generación de reportes
+│   │       └── AdminSettings.jsx       # Configuraciones del admin
 │   ├── pages/
 │   │   ├── Home.jsx            # Página principal
 │   │   ├── Login.jsx           # Página de inicio de sesión
 │   │   ├── CrearCuenta.jsx     # Página de registro
-│   │   └── Evaluacion.jsx      # Página de evaluación (placeholder)
+│   │   ├── Evaluacion.jsx      # Página de evaluación (placeholder)
+│   │   └── AdminDashboard.jsx  # Panel de administración principal
 │   ├── App.js                  # Componente principal con enrutamiento
 │   ├── App.css                 # Estilos globales
 │   ├── index.js                # Punto de entrada de la aplicación
@@ -168,6 +177,14 @@ colors: {
   - Análisis de necesidades
   - Recomendaciones de psicólogos
 
+### 🛠️ Panel de Administración (`/admin`)
+- **Dashboard Principal**: Estadísticas y métricas del sistema
+- **Gestión de Profesionales**: Administración de psicólogos registrados
+- **Gestión de Usuarios**: Control de usuarios de la plataforma
+- **Gestión de Tests**: Administración de evaluaciones psicológicas
+- **Reportes**: Generación y visualización de análisis
+- **Configuraciones**: Ajustes del sistema administrativo
+
 ## 🔧 Componentes Principales
 
 ### Navbar
@@ -178,7 +195,7 @@ colors: {
 
 ### HeroSection
 - Título llamativo con gradiente de colores
-- Tres botones de acción principales
+- Dos botones de acción principales
 - Información de confidencialidad
 - Iconos de características principales
 
@@ -204,6 +221,11 @@ colors: {
 - [x] Estilos con TailwindCSS
 - [x] Componentes reutilizables
 - [x] Accesibilidad básica
+- [x] Panel de administración completo
+- [x] Dashboard con estadísticas
+- [x] Gestión de profesionales, usuarios y tests
+- [x] Sistema de reportes
+- [x] Configuraciones administrativas
 
 ### 🚧 En Desarrollo
 - [ ] Integración con Firebase
@@ -217,7 +239,8 @@ colors: {
 - [ ] Sistema de pagos
 - [ ] Chat en tiempo real
 - [ ] Calificaciones y reseñas
-- [ ] Panel de administración
+- [ ] Integración con Firebase
+- [ ] Autenticación por roles
 
 ## 🔒 Seguridad y Privacidad
 
@@ -286,6 +309,14 @@ colors: {
 - Conventional Commits
 - Code review obligatorio
 
+
+---
+
+## 👨‍💻 Desarrollador
+
+**José Brizuela**  
+*Universitario*  
+Ciudad de Villarrica, Guairá, Paraguay
 
 ---
 
