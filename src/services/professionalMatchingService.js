@@ -1,0 +1,277 @@
+import { 
+  collection, 
+  query, 
+  where, 
+  getDocs, 
+  doc, 
+  updateDoc, 
+  getDoc,
+  orderBy,
+  limit
+} from 'firebase/firestore';
+import { db } from '../firebase/firebase';
+import { serverTimestamp } from 'firebase/firestore';
+
+// Función para normalizar especialidades
+const normalizeSpecialties = (specialties) => {
+  if (!Array.isArray(specialties)) return ['general'];
+  
+  return specialties.map(specialty => 
+    specialty.toLowerCase()
+      .replace(/[áàäâ]/g, 'a')
+      .replace(/[éèëê]/g, 'e')
+      .replace(/[íìïî]/g, 'i')
+      .replace(/[óòöô]/g, 'o')
+      .replace(/[úùüû]/g, 'u')
+      .trim()
+  );
+};
+
+// Función para calcular puntuación de compatibilidad
+const calculateCompatibilityScore = (professional, testSpecialties, userResults, userId) => {
+  let score = 0;
+  
+  // 1. Compatibilidad de especialidades (35% del peso)
+  const profSpecialties = normalizeSpecialties(professional.specialities || []);
+  const testSpecialtiesNormalized = normalizeSpecialties(testSpecialties);
+  
+  let specialtyMatch = 0;
+  testSpecialtiesNormalized.forEach(testSpecialty => {
+    profSpecialties.forEach(profSpecialty => {
+      if (profSpecialty.includes(testSpecialty) || testSpecialty.includes(profSpecialty)) {
+        specialtyMatch += 1;
+      }
+    });
+  });
+  
+  score += (specialtyMatch / testSpecialtiesNormalized.length) * 35;
+  
+  // 2. Calificación del profesional (20% del peso)
+  const rating = professional.rating || 0;
+  const ratingCount = professional.ratingCount || 0;
+  
+  // Solo considerar calificación si tiene al menos 3 reseñas
+  if (ratingCount >= 3) {
+    score += (rating / 5) * 20;
+  } else {
+    // Si no tiene suficientes reseñas, dar puntuación neutral
+    score += 10;
+  }
+  
+  // 3. Disponibilidad (15% del peso)
+  if (professional.availability?.isAvailable === true) {
+    score += 15;
+  } else {
+    score += 0;
+  }
+  
+  // 4. Experiencia (10% del peso)
+  const experienceYears = parseInt(professional.exprecienceYears) || 0;
+  if (experienceYears >= 5) {
+    score += 10;
+  } else if (experienceYears >= 3) {
+    score += 7;
+  } else if (experienceYears >= 1) {
+    score += 4;
+  } else {
+    score += 1;
+  }
+  
+  // 5. Modalidades de atención (5% del peso)
+  const modalities = professional.modalities || {};
+  if (modalities.online || modalities.inPerson || modalities.hybrid) {
+    score += 5;
+  }
+  
+  // 6. Diversidad de asignaciones (10% del peso) - Evitar siempre el mismo profesional
+  const professionalId = professional.id;
+  const diversityBonus = Math.random() * 10; // Bonus aleatorio para diversidad
+  score += diversityBonus;
+  
+  // 7. Carga de trabajo (5% del peso) - Preferir profesionales con menos usuarios asignados
+  const currentAssignments = professional.currentAssignments || 0;
+  if (currentAssignments === 0) {
+    score += 5;
+  } else if (currentAssignments <= 5) {
+    score += 3;
+  } else if (currentAssignments <= 10) {
+    score += 1;
+  }
+  
+  return Math.min(score, 100); // Máximo 100 puntos
+};
+
+// Buscar profesional disponible para un usuario
+export const findMatchingProfessional = async (userId, testSpecialties, userResults) => {
+  try {
+    console.log('🔍 Buscando profesional para usuario:', { userId, testSpecialties, userResults });
+    
+    // Buscar todos los profesionales activos y verificados
+    const professionalsRef = collection(db, 'professionals');
+    const q = query(
+      professionalsRef,
+      where('status', '==', 'active'),
+      where('isVerified', '==', true)
+    );
+    
+    const querySnapshot = await getDocs(q);
+    
+    if (querySnapshot.empty) {
+      console.log('❌ No se encontraron profesionales activos');
+      await updateDoc(doc(db, 'users', userId), {
+        matchedProfessional: 'no_available_professionals',
+        updatedAt: serverTimestamp(),
+      });
+      return { success: false, error: 'No hay profesionales disponibles en este momento.' };
+    }
+    
+    const professionals = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+    
+    console.log('📋 Profesionales encontrados:', professionals.length);
+    
+    // Calcular puntuación de compatibilidad para cada profesional
+    const professionalsWithScores = professionals.map(professional => {
+      const compatibilityScore = calculateCompatibilityScore(professional, testSpecialties, userResults, userId);
+      return {
+        ...professional,
+        compatibilityScore
+      };
+    });
+    
+    // Filtrar profesionales disponibles y ordenar por puntuación de compatibilidad
+    const availableProfessionals = professionalsWithScores
+      .filter(professional => professional.availability?.isAvailable === true)
+      .sort((a, b) => b.compatibilityScore - a.compatibilityScore);
+    
+    console.log('🎯 Profesionales disponibles con puntuaciones:', availableProfessionals.length);
+    console.log('📊 Puntuaciones:', availableProfessionals.map(p => ({ name: p.name, score: p.compatibilityScore.toFixed(2) })));
+    
+    if (availableProfessionals.length === 0) {
+      console.log('⚠️ No hay profesionales disponibles, buscando cualquier profesional activo...');
+      
+      // Si no hay profesionales disponibles, usar el mejor profesional activo
+      const bestInactiveProfessional = professionalsWithScores
+        .sort((a, b) => b.compatibilityScore - a.compatibilityScore)[0];
+      
+      if (bestInactiveProfessional) {
+        await updateDoc(doc(db, 'users', userId), {
+          matchedProfessional: bestInactiveProfessional.id,
+          professionalMatches: (userResults.professionalMatches || 0) + 1,
+          updatedAt: serverTimestamp(),
+        });
+        
+        console.log('✅ Profesional asignado (no disponible):', bestInactiveProfessional.name);
+        return { 
+          success: true, 
+          professional: bestInactiveProfessional,
+          warning: 'Profesional asignado pero no disponible en este momento'
+        };
+      }
+      
+      await updateDoc(doc(db, 'users', userId), {
+        matchedProfessional: 'no_available_professionals',
+        updatedAt: serverTimestamp(),
+      });
+      return { success: false, error: 'No hay profesionales disponibles en este momento.' };
+    }
+    
+    // Implementar selección diversa: elegir entre los mejores 3 profesionales
+    const topCandidates = availableProfessionals.slice(0, Math.min(3, availableProfessionals.length));
+    
+    // Si hay múltiples candidatos con puntuaciones similares, elegir aleatoriamente
+    let selectedProfessional;
+    if (topCandidates.length === 1) {
+      selectedProfessional = topCandidates[0];
+    } else {
+      // Calcular pesos basados en las puntuaciones
+      const totalScore = topCandidates.reduce((sum, p) => sum + p.compatibilityScore, 0);
+      const weights = topCandidates.map(p => p.compatibilityScore / totalScore);
+      
+      // Selección ponderada aleatoria
+      const random = Math.random();
+      let cumulativeWeight = 0;
+      
+      for (let i = 0; i < topCandidates.length; i++) {
+        cumulativeWeight += weights[i];
+        if (random <= cumulativeWeight) {
+          selectedProfessional = topCandidates[i];
+          break;
+        }
+      }
+      
+      // Fallback al primer candidato si algo sale mal
+      if (!selectedProfessional) {
+        selectedProfessional = topCandidates[0];
+      }
+    }
+    
+    console.log('🎯 Profesional seleccionado:', selectedProfessional.name, 'Puntuación:', selectedProfessional.compatibilityScore.toFixed(2));
+    console.log('📊 Candidatos considerados:', topCandidates.map(p => ({ name: p.name, score: p.compatibilityScore.toFixed(2) })));
+    
+    // Actualizar el documento del usuario
+    await updateDoc(doc(db, 'users', userId), {
+      matchedProfessional: selectedProfessional.id,
+      professionalMatches: (userResults.professionalMatches || 0) + 1,
+      updatedAt: serverTimestamp(),
+    });
+    
+    console.log('✅ Profesional asignado:', selectedProfessional.name, 'Puntuación:', selectedProfessional.compatibilityScore.toFixed(2));
+    return { 
+      success: true, 
+      professional: selectedProfessional,
+      compatibilityScore: selectedProfessional.compatibilityScore
+    };
+    
+  } catch (error) {
+    console.error('❌ Error al buscar profesional:', error);
+    try {
+      await updateDoc(doc(db, 'users', userId), {
+        matchedProfessional: 'error_matching',
+        updatedAt: serverTimestamp(),
+      });
+    } catch (updateError) {
+      console.error('Error al actualizar estado de error:', updateError);
+    }
+    return { success: false, error: error.message };
+  }
+};
+
+// Obtener datos del profesional asignado
+export const getAssignedProfessional = async (professionalId) => {
+  try {
+    const professionalDoc = await getDoc(doc(db, 'professionals', professionalId));
+    if (professionalDoc.exists()) {
+      return { success: true, data: { id: professionalDoc.id, ...professionalDoc.data() } };
+    } else {
+      return { success: false, error: 'Profesional no encontrado' };
+    }
+  } catch (error) {
+    console.error('Error al obtener datos del profesional asignado:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Obtener información de contacto del profesional
+export const getProfessionalContactInfo = (professional) => {
+  if (!professional) return null;
+  
+  return {
+    name: professional.name,
+    email: professional.contact?.email || professional.email,
+    phone: professional.contact?.phone || professional.phone,
+    whatsapp: professional.contact?.whatsapp,
+    instagram: professional.contact?.instagram,
+    linkedin: professional.contact?.linkedin,
+    professionalcode: professional.professionalcode,
+    specialties: professional.specialities || [],
+    experience: professional.exprecienceYears,
+    rating: professional.rating,
+    ratingCount: professional.ratingCount,
+    modalities: professional.modalities || {},
+    availability: professional.availability || {},
+    bio: professional.bio
+  };
+};

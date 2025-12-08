@@ -1,284 +1,291 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import analyticsService from '../../services/analyticsService';
+import SkeletonLoader from '../common/SkeletonLoader';
 
 const ManageReports = () => {
-  const [selectedReport, setSelectedReport] = useState('overview');
-  const [dateRange, setDateRange] = useState('month');
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState({
+    system: null,
+    users: null,
+    professionals: null,
+    sessions: null,
+    userList: [],
+    sessionList: []
+  });
+  const [error, setError] = useState(null);
 
-  // Datos simulados de reportes
-  const reportData = {
-    overview: {
-      title: 'Resumen General',
-      metrics: [
-        { label: 'Usuarios Totales', value: '1,247', change: '+12.5%', trend: 'up' },
-        { label: 'Profesionales Activos', value: '89', change: '+3.2%', trend: 'up' },
-        { label: 'Tests Completados', value: '892', change: '+8.7%', trend: 'up' },
-        { label: 'Sesiones Activas', value: '156', change: '-2.1%', trend: 'down' }
-      ]
-    },
-    users: {
-      title: 'Análisis de Usuarios',
-      metrics: [
-        { label: 'Nuevos Registros', value: '45', change: '+15.2%', trend: 'up' },
-        { label: 'Usuarios Activos', value: '1,089', change: '+5.8%', trend: 'up' },
-        { label: 'Tasa de Retención', value: '87.3%', change: '+2.1%', trend: 'up' },
-        { label: 'Tiempo Promedio', value: '23 min', change: '+1.5%', trend: 'up' }
-      ]
-    },
-    professionals: {
-      title: 'Análisis de Profesionales',
-      metrics: [
-        { label: 'Nuevos Profesionales', value: '3', change: '+50%', trend: 'up' },
-        { label: 'Verificaciones Pendientes', value: '12', change: '-8.3%', trend: 'down' },
-        { label: 'Calificación Promedio', value: '4.6', change: '+0.2', trend: 'up' },
-        { label: 'Sesiones Realizadas', value: '234', change: '+12.4%', trend: 'up' }
-      ]
-    },
-    tests: {
-      title: 'Análisis de Tests',
-      metrics: [
-        { label: 'Tests Completados', value: '892', change: '+8.7%', trend: 'up' },
-        { label: 'Tasa de Completación', value: '76.2%', change: '+3.1%', trend: 'up' },
-        { label: 'Puntuación Promedio', value: '7.8', change: '+0.3', trend: 'up' },
-        { label: 'Tests Abandonados', value: '45', change: '-12.5%', trend: 'down' }
-      ]
-    }
-  };
+  useEffect(() => {
+    const fetchMetrics = async () => {
+      try {
+        setLoading(true);
+        const [systemMetrics, userStats, profStats, sessionStats, userList, sessionList] = await Promise.all([
+          analyticsService.getSystemMetrics(),
+          analyticsService.getUserStats(),
+          analyticsService.getProfessionalStats(),
+          analyticsService.getSessionStats(),
+          analyticsService.getAllUsers(),
+          analyticsService.getAllSessions()
+        ]);
 
-  const recentReports = [
-    {
-      id: 1,
-      name: 'Reporte Mensual de Usuarios',
-      type: 'users',
-      status: 'completed',
-      generatedAt: '2024-02-22 10:30',
-      size: '2.3 MB'
-    }
-  ];
+        setData({
+          system: systemMetrics,
+          users: userStats,
+          professionals: profStats,
+          sessions: sessionStats,
+          userList,
+          sessionList
+        });
+      } catch (err) {
+        console.error('Error cargando reportes:', err);
+        setError('Error al cargar los datos de reportes.');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'completed':
-        return <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">Completado</span>;
-      case 'processing':
-        return <span className="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">Procesando</span>;
-      case 'failed':
-        return <span className="px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded-full">Fallido</span>;
-      default:
-        return null;
-    }
-  };
+    fetchMetrics();
+  }, []);
 
-  const getTrendIcon = (trend) => {
-    return trend === 'up' ? (
-      <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-      </svg>
-    ) : (
-      <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
-      </svg>
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Reportes</h1>
+          <p className="text-gray-600">Cargando métricas del sistema...</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <SkeletonLoader variant="card" height="120px" count={4} />
+        </div>
+      </div>
     );
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 bg-red-50 text-red-700 rounded-lg">
+        {error}
+        <button
+          onClick={() => window.location.reload()}
+          className="ml-4 text-sm underline hover:text-red-800"
+        >
+          Reintentar
+        </button>
+      </div>
+    );
+  }
+
+  const { system, users, professionals, sessions, userList, sessionList } = data;
+
+  const downloadCSV = (data, filename) => {
+    if (!data || !data.length) return;
+
+    const headers = Object.keys(data[0]);
+    const csvContent = [
+      headers.join(','),
+      ...data.map(row => headers.map(header => JSON.stringify(row[header] || '')).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', filename);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Reportes y Análisis</h1>
-            <p className="text-gray-600 mt-1">Genera y gestiona reportes detallados de la plataforma</p>
-          </div>
-          <div className="flex items-center space-x-4">
-            <select
-              value={dateRange}
-              onChange={(e) => setDateRange(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-            >
-              <option value="week">Última semana</option>
-              <option value="month">Último mes</option>
-              <option value="quarter">Último trimestre</option>
-              <option value="year">Último año</option>
-            </select>
-            <button className="bg-gradient-to-r from-primary-500 to-secondary-500 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-all duration-200 flex items-center space-x-2">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              <span>Generar Reporte</span>
-            </button>
-          </div>
+    <div className="space-y-8">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Dashboard de Reportes</h1>
+          <p className="text-gray-600">Visión general y descarga de datos</p>
         </div>
-      </div>
-
-      {/* Navegación de reportes */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex space-x-1">
-          {Object.keys(reportData).map((key) => (
-            <button
-              key={key}
-              onClick={() => setSelectedReport(key)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                selectedReport === key
-                  ? 'bg-gradient-to-r from-primary-500 to-secondary-500 text-white shadow-lg'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-              }`}
-            >
-              {reportData[key].title}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Métricas del reporte seleccionado */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {reportData[selectedReport].metrics.map((metric, index) => (
-          <div key={index} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow duration-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">{metric.label}</p>
-                <p className="text-2xl font-bold text-gray-900">{metric.value}</p>
-                <div className="flex items-center mt-2">
-                  {getTrendIcon(metric.trend)}
-                  <span className={`text-sm ml-1 ${metric.trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
-                    {metric.change}
-                  </span>
-                  <span className="text-sm text-gray-500 ml-1">vs mes anterior</span>
-                </div>
-              </div>
-              <div className="w-12 h-12 bg-gradient-to-br from-primary-100 to-secondary-100 rounded-lg flex items-center justify-center">
-                <svg className="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Gráficas y análisis detallado */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Gráfica de tendencias */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Tendencias de Crecimiento</h3>
-          <div className="h-64 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg flex items-end justify-center space-x-2 p-4">
-            {[30, 45, 60, 75, 85, 90, 95].map((height, index) => (
-              <div
-                key={index}
-                className="w-6 bg-gradient-to-t from-primary-500 to-secondary-500 rounded-t-lg transition-all duration-300 hover:scale-110"
-                style={{ height: `${height}%` }}
-              ></div>
-            ))}
-          </div>
-          <div className="mt-4 grid grid-cols-7 text-center text-xs text-gray-500">
-            <span>Lun</span>
-            <span>Mar</span>
-            <span>Mié</span>
-            <span>Jue</span>
-            <span>Vie</span>
-            <span>Sáb</span>
-            <span>Dom</span>
-          </div>
-        </div>
-
-        {/* Distribución por categorías */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Distribución por Categorías</h3>
-          <div className="space-y-4">
-            {[
-              { category: 'Usuarios Activos', percentage: 45, color: 'bg-blue-500' },
-              { category: 'Profesionales', percentage: 25, color: 'bg-green-500' },
-              { category: 'Tests Completados', percentage: 20, color: 'bg-purple-500' },
-              { category: 'Sesiones', percentage: 10, color: 'bg-orange-500' }
-            ].map((item, index) => (
-              <div key={index} className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">{item.category}</span>
-                <div className="flex items-center space-x-2">
-                  <div className="w-24 bg-gray-200 rounded-full h-2">
-                    <div
-                      className={`h-2 rounded-full ${item.color}`}
-                      style={{ width: `${item.percentage}%` }}
-                    ></div>
-                  </div>
-                  <span className="text-sm font-medium text-gray-900">{item.percentage}%</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Reportes recientes */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-gray-900">Reportes Recientes</h3>
-          <button className="text-primary-600 hover:text-primary-700 text-sm font-medium">
-            Ver todos →
+        <div className="space-x-4">
+          <button
+            onClick={() => downloadCSV(userList, 'usuarios_psicomatch.csv')}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+            disabled={!userList?.length}
+          >
+            📊 Exportar Usuarios
+          </button>
+          <button
+            onClick={() => downloadCSV(sessionList, 'sesiones_psicomatch.csv')}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+            disabled={!sessionList?.length}
+          >
+            📅 Exportar Sesiones
           </button>
         </div>
-        
+      </div>
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-medium text-gray-500">Total Usuarios</h3>
+            <span className="p-2 bg-blue-100 text-blue-600 rounded-full">👥</span>
+          </div>
+          <p className="text-3xl font-bold text-gray-900">{system?.totalUsers || 0}</p>
+          <p className="text-xs text-green-600 mt-2">{users?.newThisMonth || 0} nuevos este mes</p>
+        </div>
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-medium text-gray-500">Profesionales</h3>
+            <span className="p-2 bg-purple-100 text-purple-600 rounded-full">👨‍⚕️</span>
+          </div>
+          <p className="text-3xl font-bold text-gray-900">{system?.totalProfessionals || 0}</p>
+          <div className="flex gap-2 mt-2 text-xs">
+            <span className="text-green-600">{professionals?.active || 0} activos</span>
+            <span className="text-gray-400">|</span>
+            <span className="text-orange-600">{professionals?.pending || 0} pendientes</span>
+          </div>
+        </div>
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-medium text-gray-500">Sesiones Totales</h3>
+            <span className="p-2 bg-green-100 text-green-600 rounded-full">📅</span>
+          </div>
+          <p className="text-3xl font-bold text-gray-900">{system?.totalSessions || 0}</p>
+          <p className="text-xs text-gray-500 mt-2">Tasa de completado: {sessions?.completionRate || 0}%</p>
+        </div>
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-medium text-gray-500">Valoración Media</h3>
+            <span className="p-2 bg-yellow-100 text-yellow-600 rounded-full">⭐</span>
+          </div>
+          <p className="text-3xl font-bold text-gray-900">{system?.averageRating || 0}</p>
+          <p className="text-xs text-gray-500 mt-2">Basado en {system?.totalReviews || 0} reseñas</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Distribución por Especialidad */}
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h3 className="text-lg font-semibold text-gray-800 mb-6">Profesionales por Especialidad</h3>
+          <div className="space-y-4">
+            {Object.entries(professionals?.specialtyDistribution || {}).length > 0 ? (
+              Object.entries(professionals.specialtyDistribution)
+                .sort(([, a], [, b]) => b - a)
+                .map(([specialty, count], index) => {
+                  const percentage = Math.round((count / (system?.totalProfessionals || 1)) * 100);
+                  return (
+                    <div key={specialty}>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="font-medium text-gray-700">{specialty}</span>
+                        <span className="text-gray-500">{count} ({percentage}%)</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className={`h-2 rounded-full ${index % 2 === 0 ? 'bg-indigo-500' : 'bg-purple-500'}`}
+                          style={{ width: `${percentage}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  );
+                })
+            ) : (
+              <p className="text-gray-500 text-center py-4">No hay datos de especialidades</p>
+            )}
+          </div>
+        </div>
+
+        {/* Estado de Sesiones */}
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h3 className="text-lg font-semibold text-gray-800 mb-6">Estado de Sesiones</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 bg-gray-50 rounded-lg text-center">
+              <div className="text-2xl font-bold text-blue-600">{sessions?.byStatus?.scheduled || 0}</div>
+              <div className="text-sm text-gray-600">Programadas</div>
+            </div>
+            <div className="p-4 bg-gray-50 rounded-lg text-center">
+              <div className="text-2xl font-bold text-green-600">{sessions?.byStatus?.completed || 0}</div>
+              <div className="text-sm text-gray-600">Completadas</div>
+            </div>
+            <div className="p-4 bg-gray-50 rounded-lg text-center">
+              <div className="text-2xl font-bold text-yellow-600">{sessions?.byStatus?.inProgress || 0}</div>
+              <div className="text-sm text-gray-600">En Progreso</div>
+            </div>
+            <div className="p-4 bg-gray-50 rounded-lg text-center">
+              <div className="text-2xl font-bold text-red-600">{sessions?.byStatus?.cancelled || 0}</div>
+              <div className="text-sm text-gray-600">Canceladas</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabla de Usuarios Recientes */}
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-800">Últimos Usuarios Registrados</h3>
+        </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Nombre del Reporte
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Tipo
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Estado
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Generado
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Tamaño
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Acciones
-                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rol</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha Registro</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {recentReports.map((report) => (
-                <tr key={report.id} className="hover:bg-gray-50">
+              {userList?.slice(0, 5).map((user) => (
+                <tr key={user.id}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.email}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">{user.role}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(user.createdAt).toLocaleDateString()}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{report.name}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full capitalize">
-                      {report.type}
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.status === 'Activo' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                      {user.status}
                     </span>
                   </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Tabla de Sesiones Recientes */}
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-800">Sesiones Recientes</h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paciente</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Profesional</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {sessionList?.slice(0, 5).map((session) => (
+                <tr key={session.id}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{session.patientName}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{session.professionalName}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{session.date} {session.time}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">{session.type}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {getStatusBadge(report.status)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{report.generatedAt}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{report.size}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center justify-end space-x-2">
-                      <button className="text-primary-600 hover:text-primary-900 transition-colors duration-200">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                      </button>
-                      <button className="text-gray-600 hover:text-gray-900 transition-colors duration-200">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                      </button>
-                      <button className="text-red-600 hover:text-red-900 transition-colors duration-200">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
-                    </div>
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${session.status === 'completed' ? 'bg-green-100 text-green-800' :
+                      session.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
+                        session.status === 'inProgress' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'
+                      }`}>
+                      {session.status === 'scheduled' ? 'Programada' :
+                        session.status === 'completed' ? 'Completada' :
+                          session.status === 'inProgress' ? 'En Progreso' : session.status}
+                    </span>
                   </td>
                 </tr>
               ))}

@@ -1,6 +1,7 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "PsicoMatch",
+  "name": "PsicoMatch - Plataforma de Salud Mental",
+  "description": "Plataforma de emparejamiento con profesionales de salud mental",
   "icons": [
     {
       "src": "favicon.ico",
@@ -10,16 +11,27 @@
     {
       "src": "logo192.png",
       "type": "image/png",
-      "sizes": "192x192"
+      "sizes": "192x192",
+      "purpose": "any maskable"
     },
     {
       "src": "logo512.png",
       "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "512x512",
+      "purpose": "any maskable"
     }
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "theme_color": "#6366f1",
+  "background_color": "#ffffff",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "categories": [
+    "health",
+    "medical",
+    "productivity"
+  ],
+  "lang": "es-ES",
+  "dir": "ltr"
 }

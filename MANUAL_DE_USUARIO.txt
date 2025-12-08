@@ -1,0 +1,263 @@
+================================================================================
+MANUAL DE USUARIO INTEGRAL - PSICOMATCH (VERSIÓN DETALLADA 2.0)
+================================================================================
+
+Este documento es la guía oficial y detallada para el uso de la plataforma web Psicomatch.
+Está diseñado para guiar a cualquier usuario, profesional o administrador a través de todas las funcionalidades del sistema.
+
+ÍNDICE
+I.   ACCESO PÚBLICO
+II.  MANUAL PARA PACIENTES (USUARIOS)
+III. MANUAL PARA PROFESIONALES DE LA SALUD
+IV.  MANUAL PARA ADMINISTRADORES
+
+NOTA: Los espacios marcados como [ESPACIO PARA CAPTURA DE PANTALLA] están destinados para insertar imágenes ilustrativas.
+
+================================================================================
+I. ACCESO PÚBLICO (NAVEGACIÓN GENERAL)
+================================================================================
+
+1. PÁGINA DE INICIO (HOME)
+--------------------------------------------------------------------------------
+La puerta de entrada a Psicomatch.
+
+- **Menú Superior**: Permite navegar entre "Inicio", "Cómo Funciona", "Profesionales" y los botones de Acceso ("Iniciar Sesión", "Registrarse", "Soy Profesional").
+- **Sección Hero**: Presentación principal con un botón de llamada a la acción "Comenzar Ahora" que lleva al registro de pacientes.
+- **Profesionales Destacados**: Un carrusel interactivo que muestra tarjetas de psicólogos verificados. Al hacer clic en una tarjeta, se puede ver información básica del profesional.
+- **Preguntas Frecuentes (FAQ)**: Respuestas desplegables a dudas comunes sobre el servicio.
+- **Chat de Ayuda**: Un botón flotante (?) en la esquina inferior derecha para asistencia rápida.
+
+[ESPACIO PARA CAPTURA DE PANTALLA: Página de inicio completa]
+
+2. PÁGINA "CÓMO FUNCIONA"
+--------------------------------------------------------------------------------
+Explica el proceso de 3 pasos:
+1. Registro y Test Inicial.
+2. Match con un Profesional.
+3. Inicio de Terapia.
+
+[ESPACIO PARA CAPTURA DE PANTALLA: Sección de pasos explicativos]
+
+
+================================================================================
+II. MANUAL PARA PACIENTES (USUARIOS)
+================================================================================
+
+1. CREACIÓN DE CUENTA (REGISTRO)
+--------------------------------------------------------------------------------
+Existen dos formas de registrarse como paciente:
+
+OPCIÓN A: Registro con Correo Electrónico
+1. Haga clic en el botón "Registrarse" o "Comenzar Ahora".
+2. Ingrese su **Nombre Completo**.
+3. Ingrese un **Correo Electrónico** válido.
+4. Cree una **Contraseña** segura (debe contener al menos una mayúscula, una minúscula y un número).
+5. Confirme la contraseña.
+6. Acepte los términos y haga clic en "Crear Cuenta".
+
+OPCIÓN B: Registro con Google (Rápido)
+1. En la pantalla de registro, haga clic en el botón "Continuar con Google".
+2. Se abrirá una ventana emergente de Google. Seleccione su cuenta de Gmail.
+3. El sistema creará su cuenta automáticamente con sus datos de Google.
+
+[ESPACIO PARA CAPTURA DE PANTALLA: Formulario de registro mostrando ambas opciones]
+
+2. INICIO DE SESIÓN
+--------------------------------------------------------------------------------
+1. Vaya a "Iniciar Sesión".
+2. Ingrese su correo y contraseña, o use el botón "Continuar con Google".
+3. Si es la primera vez que ingresa, será redirigido automáticamente a la Evaluación Emocional.
+
+[ESPACIO PARA CAPTURA DE PANTALLA: Pantalla de Login]
+
+3. EVALUACIÓN EMOCIONAL INICIAL
+--------------------------------------------------------------------------------
+Este paso es CRUCIAL para asignarle el profesional adecuado.
+
+1. Al ingresar, verá una pantalla de bienvenida a la evaluación.
+2. Responda una serie de preguntas diseñada para entender su estado emocional actual y necesidades.
+3. Las preguntas pueden ser de selección múltiple o escalas de valoración.
+4. Al finalizar, el sistema analizará sus respuestas y buscará el "Match" ideal.
+
+[ESPACIO PARA CAPTURA DE PANTALLA: Pregunta de la evaluación emocional]
+
+4. EL DASHBOARD (TU PANEL DE CONTROL)
+--------------------------------------------------------------------------------
+Una vez dentro, este es su centro de mando.
+
+A. **Estado de Asignación**:
+   - Si no tiene profesional: Verá un aviso invitándole a realizar la evaluación.
+   - Si está buscando: Verá un estado de "Buscando tu profesional ideal...".
+   - Si tiene profesional: Verá la tarjeta completa de su psicólogo asignado (Nombre, Especialidad, Calificación, Contacto).
+
+B. **Acciones Rápidas (Botones)**:
+   - "Chatear": Abre la conversación directa con su profesional.
+   - "Ver Evaluaciones": Lleva al historial de sus tests.
+   - "Nueva Evaluación": Permite realizar un nuevo test de seguimiento.
+
+C. **Notificaciones**:
+   - Icono de campana en la parte superior derecha.
+   - Indica: Nuevos mensajes, sesiones programadas, o solicitudes para elegir tipo de reunión (Virtual/Presencial).
+
+[ESPACIO PARA CAPTURA DE PANTALLA: Dashboard con profesional asignado]
+
+5. COMUNICACIÓN (CHAT)
+--------------------------------------------------------------------------------
+1. Haga clic en el botón flotante de chat (esquina inferior derecha) o en el botón "Chatear" de la tarjeta del profesional.
+2. Se abrirá una ventana de conversación segura.
+3. Puede enviar mensajes de texto en tiempo real.
+4. Los mensajes no leídos se notificarán con un punto rojo en el icono de chat.
+
+[ESPACIO PARA CAPTURA DE PANTALLA: Interfaz de chat]
+
+6. GESTIÓN DE CITAS Y SESIONES
+--------------------------------------------------------------------------------
+Cuando su profesional programe una cita:
+
+1. Recibirá una notificación en el Dashboard.
+2. Si se requiere, deberá elegir el **Tipo de Reunión**: "Virtual" o "Presencial".
+3. Una vez confirmada, aparecerá en su lista de "Próximas Sesiones".
+4. **Calificación**: Al finalizar una sesión, podrá calificar la calidad de la atención y dejar una reseña para el profesional (de 1 a 5 estrellas).
+
+[ESPACIO PARA CAPTURA DE PANTALLA: Notificación de nueva cita o modal de calificación]
+
+7. MIS RESULTADOS
+--------------------------------------------------------------------------------
+1. Vaya a la sección "Progreso" o "Mis Resultados" desde el menú lateral (si disponible) o botones del dashboard.
+2. Vea gráficos de evolución de sus estados de ánimo a lo largo del tiempo.
+3. Consulte el detalle de cada evaluación realizada.
+
+[ESPACIO PARA CAPTURA DE PANTALLA: Gráficos de resultados]
+
+
+================================================================================
+III. MANUAL PARA PROFESIONALES DE LA SALUD
+================================================================================
+
+1. REGISTRO Y VALIDACIÓN PROFESIONAL
+--------------------------------------------------------------------------------
+El registro es un proceso detallado de 5 pasos para asegurar la calidad.
+
+1. Ingrese a "Soy Profesional" -> "Registrarse".
+2. **Paso 1 (Cuenta)**: Nombre, Email, Contraseña.
+3. **Paso 2 (Credenciales)**: Número de Registro Profesional, Años de Experiencia, Especialidades (seleccione de la lista o añada nuevas).
+4. **Paso 3 (Perfil Público)**: Teléfono, WhatsApp, Redes Sociales (LinkedIn/Instagram) y una Biografía detallada que verán los pacientes.
+5. **Paso 4 (Agenda)**: Defina su Zona Horaria, Duración de Sesión (ej. 60 min), Descanso entre sesiones.
+6. **Paso 5 (Políticas)**: Defina antelación mínima para reservas y políticas de cancelación.
+7. Al completar, su cuenta quedará en estado **PENDIENTE**. El administrador revisará sus datos y, si son correctos, aprobará su cuenta.
+
+[ESPACIO PARA CAPTURA DE PANTALLA: Pasos del formulario de registro profesional]
+
+2. ACCESO SEGURO (DOBLE AUTENTICACIÓN)
+--------------------------------------------------------------------------------
+Por seguridad de los datos sensibles:
+
+1. Ingrese a "Soy Profesional" -> "Iniciar Sesión".
+2. Ingrese Email y Contraseña.
+3. **Verificación de Código**: Se le solicitará un "Código de Acceso" de 5 dígitos. Este código es único y le será proporcionado por el administrador tras aprobar su cuenta (vía email o comunicación directa).
+4. Ingrese el código para acceder a su panel.
+
+[ESPACIO PARA CAPTURA DE PANTALLA: Pantalla de Código de Acceso]
+
+3. DASHBOARD PROFESIONAL
+--------------------------------------------------------------------------------
+Su oficina virtual.
+
+- **Métricas**: Resumen de Pacientes Activos, Citas de la semana, Ingresos estimados.
+- **Próximas Citas**: Lista cronológica de sesiones agendas.
+- **Acciones Rápidas**: Botones para ver calendario completo o lista de pacientes.
+
+[ESPACIO PARA CAPTURA DE PANTALLA: Dashboard Profesional completo]
+
+4. GESTIÓN DE PACIENTES
+--------------------------------------------------------------------------------
+1. Vaya a la sección "Pacientes".
+2. Verá una lista de todos los usuarios asignados a usted.
+3. Haga clic en "Ver Detalles" para acceder al expediente del paciente:
+   - Historial de sesiones.
+   - Resultados de sus tests emocionales.
+   - Notas privadas del profesional.
+   - Botón para iniciar Chat.
+
+[ESPACIO PARA CAPTURA DE PANTALLA: Lista de pacientes o expediente individual]
+
+5. CALENDARIO Y AGENDAMIENTO
+--------------------------------------------------------------------------------
+Para programar una sesión:
+
+1. Vaya a "Calendario" o use "Agendar Cita" desde el perfil de un paciente.
+2. Seleccione fecha y hora.
+3. Elija el tipo de sesión (Terapia, Consulta, Seguimiento).
+4. Puede indicar si requiere que el paciente confirme la modalidad (Virtual/Presencial).
+5. Guarde la cita. El paciente será notificado automáticamente.
+
+[ESPACIO PARA CAPTURA DE PANTALLA: Modal de creación de cita]
+
+6. PERFIL Y CONFIGURACIÓN
+--------------------------------------------------------------------------------
+Mantenga su perfil atractivo:
+- Vaya a "Mi Perfil".
+- Actualice su foto, biografía y especialidades.
+- Ajuste su disponibilidad horaria desde "Configuración".
+
+[ESPACIO PARA CAPTURA DE PANTALLA: Edición de perfil]
+
+
+================================================================================
+IV. MANUAL PARA ADMINISTRADORES
+================================================================================
+
+1. ACCESO AL PANEL DE CONTROL
+--------------------------------------------------------------------------------
+Ruta exclusiva: `psicomatch.com/admin` (o `/admin` en local).
+Requiere credenciales especiales de Administrador.
+Puede usar Google Login si su email tiene permisos de admin.
+
+2. DASHBOARD GENERAL
+--------------------------------------------------------------------------------
+Visión global del negocio.
+- Gráficos de nuevos usuarios vs. profesionales.
+- Distribución de especialidades más demandadas.
+- Actividad reciente del sistema.
+
+[ESPACIO PARA CAPTURA DE PANTALLA: Dashboard Admin con gráficos]
+
+3. GESTIÓN DE PROFESIONALES (VERIFICACIÓN)
+--------------------------------------------------------------------------------
+Tarea principal del admin: Aprobar nuevos psicólogos.
+
+1. Vaya a "Profesionales" en el menú lateral.
+2. Busque los que tengan estado "Pendiente" (marcardos en amarillo/naranja).
+3. Revise sus credenciales.
+4. Haga clic en **Verificar/Aprobar**.
+5. Al aprobar, el sistema genera automáticamente un **Código de Acceso**.
+6. **IMPORTANTE**: Debe comunicar este código al profesional para que pueda ingresar.
+
+[ESPACIO PARA CAPTURA DE PANTALLA: Lista de profesionales pendientes]
+
+4. GESTIÓN DE CÓDIGOS DE ACCESO
+--------------------------------------------------------------------------------
+1. Vaya a la sección "Códigos de Acceso".
+2. Aquí verá una tabla con todos los profesionales activos y sus códigos de 5 dígitos.
+3. Si un profesional olvida su código, puede consultarlo aquí o generar uno nuevo con el botón "Regenerar".
+
+[ESPACIO PARA CAPTURA DE PANTALLA: Tabla de códigos de acceso]
+
+5. REPORTES AVANZADOS
+--------------------------------------------------------------------------------
+Herramientas para toma de decisiones.
+
+1. Sección "Reportes".
+2. Filtre por fechas (último mes, año, personalizado).
+3. **Exportar**: Use los botones "Exportar PDF" o "Exportar Excel" para descargar los datos de usuarios, sesiones y estadísticas financieras para presentaciones externas.
+
+[ESPACIO PARA CAPTURA DE PANTALLA: Botones de exportación y gráficos de reporte]
+
+6. USUARIOS Y SISTEMA
+--------------------------------------------------------------------------------
+- **Usuarios**: Puede bloquear usuarios conflictivos o restablecer contraseñas si es necesario.
+- **Configuración de Datos**: Sección técnica para mantenimiento de la base de datos (usar con precaución extrema, idealmente solo por soporte técnico).
+
+================================================================================
+FIN DEL MANUAL DE USUARIO
+================================================================================

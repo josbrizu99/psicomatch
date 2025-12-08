@@ -40,6 +40,19 @@ const HeroSection = () => {
                 ¿Ya tienes una cuenta?
               </Link>
             </div>
+            
+            {/* Botón para profesionales */}
+            <div className="mb-8">
+              <Link
+                to="/professional-login"
+                className="inline-flex items-center space-x-2 bg-gradient-to-r from-secondary-500 to-secondary-600 text-white px-6 py-3 rounded-lg font-semibold text-base hover:from-secondary-600 hover:to-secondary-700 transition-all duration-300 transform hover:scale-105 shadow-lg"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                <span>Soy Profesional</span>
+              </Link>
+            </div>
 
             {/* Stats */}
             <div className="grid grid-cols-3 gap-6">

@@ -1,23 +1,91 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
+# Dependencias
 /node_modules
 /.pnp
 .pnp.js
 
-# testing
+# Testing
 /coverage
+/__tests__/coverage
 
-# production
+# Producción
 /build
+/dist
 
-# misc
-.DS_Store
+# Archivos de entorno
+.env
 .env.local
+.env.development
 .env.development.local
+.env.test
 .env.test.local
+.env.production
 .env.production.local
+.env.*.local
 
+# Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+lerna-debug.log*
+*.log
+
+# Firebase
+.firebase/
+.firebaserc
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+database-debug.log
+pubsub-debug.log
+
+# IDEs y Editores
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# Sistema Operativo  
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Archivos de debug/documentación temporal
+*_DEBUG.md
+*_DIAGNOSTIC.md
+*_SOLUCION*.md
+*_CONFIGURAR*.md
+*_VERIFICAR*.md
+CORS_SETUP.md
+CREDENCIALES_ADMIN.md
+ESTRUCTURA_*.md
+REGLAS_*.md
+CLOUD_FUNCTIONS_GUIDE.md
+SECURITY_GUIDE.md
+
+# Scripts
+*.bat
+*.sh
+
+# Misc
+.sass-cache
+.eslintcache
+.stylelintcache
+.cache/
+.temp/
+
+# Optional (descomentar si lo deseas)
+# package-lock.json
+public/__/firebase/init.json
+VERIFICAR_FIREBASE_CONSOLE.md
