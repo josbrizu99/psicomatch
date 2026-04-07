@@ -1,4 +1,5 @@
 import React from 'react';
+import ScrollReveal from '../common/ScrollReveal';
 
 const Stats = () => {
     const statistics = [
@@ -58,20 +59,22 @@ const Stats = () => {
 
             <div className="container mx-auto px-6 relative z-10">
                 {/* Header */}
-                <div className="text-center mb-16">
+                <ScrollReveal direction="up" className="text-center mb-16">
                     <h2 className="text-4xl font-bold text-white mb-4">
                         Números que Hablan por Nosotros
                     </h2>
                     <p className="text-xl text-primary-100 max-w-2xl mx-auto">
                         Miles de personas ya han encontrado el apoyo que necesitaban
                     </p>
-                </div>
+                </ScrollReveal>
 
                 {/* Stats Grid */}
                 <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
                     {statistics.map((stat, index) => (
-                        <div
+                        <ScrollReveal
                             key={index}
+                            direction={index % 2 === 0 ? "scale" : "up"}
+                            delay={index * 0.1}
                             className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20 hover:bg-white/20 transition-all duration-300 transform hover:scale-105"
                         >
                             {/* Icon */}
@@ -93,19 +96,19 @@ const Stats = () => {
                             <p className="text-sm text-primary-200">
                                 {stat.description}
                             </p>
-                        </div>
+                        </ScrollReveal>
                     ))}
                 </div>
 
                 {/* Additional Info */}
-                <div className="mt-16 text-center">
+                <ScrollReveal direction="up" delay={0.4} className="mt-16 text-center">
                     <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-6 py-3 rounded-full border border-white/20">
                         <svg className="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                         </svg>
                         <span className="text-white font-medium">Actualizamos nuestras estadísticas mensualmente</span>
                     </div>
-                </div>
+                </ScrollReveal>
             </div>
         </section>
     );

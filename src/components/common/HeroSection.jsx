@@ -1,118 +1,120 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import ScrollReveal from '../common/ScrollReveal';
 
 const HeroSection = () => {
   return (
-    <div className="relative bg-gradient-to-br from-primary-600 via-primary-700 to-primary-800 min-h-screen flex items-center">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute top-20 left-20 w-32 h-32 bg-white rounded-full"></div>
-        <div className="absolute top-40 right-32 w-24 h-24 bg-white rounded-full"></div>
-        <div className="absolute bottom-32 left-1/4 w-16 h-16 bg-white rounded-full"></div>
-        <div className="absolute bottom-20 right-20 w-20 h-20 bg-white rounded-full"></div>
-      </div>
+    <div className="relative bg-surface-off">
+      
+      {/* Top Banner Area */}
+      <div className="relative bg-primary-900 pt-32 pb-56 lg:pb-72 overflow-hidden">
+        {/* Background Image / Overlay */}
+        <div className="absolute inset-0 z-0">
+          <img 
+            src="https://images.unsplash.com/photo-1573497620053-ea5300f94f21?auto=format&fit=crop&q=80" 
+            alt="Psicomatch Background" 
+            className="w-full h-full object-cover opacity-20"
+          />
+          {/* Capas de color para el tono Teal/Sage sofisticado */}
+          <div className="absolute inset-0 bg-[#0a3835]/80 mix-blend-multiply z-10"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-[#051c1a] to-transparent z-10 opacity-90"></div>
+        </div>
 
-      <div className="container mx-auto px-6 py-16 relative z-10">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          {/* Content */}
-          <div className="text-white">
-            <h1 className="text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-              Encuentra el apoyo
-              <span className="block text-primary-200">psicológico que necesitas</span>
-            </h1>
-            
-            <p className="text-xl mb-8 text-primary-100 leading-relaxed">
-              Conectamos a personas con profesionales de la salud mental certificados. 
-              Recibe atención personalizada y de calidad desde la comodidad de tu hogar.
+        {/* Main Content Area */}
+        <div className="container mx-auto px-6 relative z-20">
+          <ScrollReveal direction="up" className="max-w-2xl">
+            <p className="text-primary-200 font-bold tracking-wider mb-3 uppercase text-sm flex items-center gap-2">
+              <span className="w-8 h-0.5 bg-primary-400"></span>
+              Bienvenidos a Psicomatch
             </p>
-
-            <div className="flex flex-col sm:flex-row gap-4 mb-8">
+            <h1 className="text-5xl lg:text-7xl font-extrabold mb-6 text-white leading-[1.1] tracking-tight">
+              Atención Psicológica <br/>
+              <span className="text-primary-400">en tu Idioma</span>
+            </h1>
+            <p className="text-lg text-gray-300 mb-10 max-w-lg leading-relaxed font-light">
+              Conectamos a personas con profesionales de la salud mental certificados. 
+              Recibe atención personalizada y de calidad desde donde estés.
+            </p>
+            
+            <div className="flex flex-wrap gap-4">
               <Link
                 to="/crear-cuenta"
-                className="bg-white text-primary-700 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-primary-50 transition-all duration-300 transform hover:scale-105 shadow-lg"
+                className="inline-block border-2 border-white text-white px-8 py-3.5 rounded-xl font-medium text-lg hover:bg-white hover:text-primary-900 transition-all duration-300 shadow-lg"
               >
-                Comenzar Ahora
+                Empieza ahora
               </Link>
               <Link
                 to="/login"
-                className="border-2 border-white text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-white hover:text-primary-700 transition-all duration-300 transform hover:scale-105"
+                className="inline-block bg-white/10 backdrop-blur-sm border-2 border-transparent text-white px-8 py-3.5 rounded-xl font-medium text-lg hover:bg-white/20 transition-all duration-300"
               >
-                ¿Ya tienes una cuenta?
+                ¿Ya tienes una cuenta? Inicia sesión
               </Link>
             </div>
-            
-            {/* Botón para profesionales */}
-            <div className="mb-8">
-              <Link
-                to="/professional-login"
-                className="inline-flex items-center space-x-2 bg-gradient-to-r from-secondary-500 to-secondary-600 text-white px-6 py-3 rounded-lg font-semibold text-base hover:from-secondary-600 hover:to-secondary-700 transition-all duration-300 transform hover:scale-105 shadow-lg"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                <span>Soy Profesional</span>
-              </Link>
-            </div>
-
-            {/* Stats */}
-            <div className="grid grid-cols-3 gap-6">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-primary-200">500+</div>
-                <div className="text-sm text-primary-100">Profesionales</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-primary-200">10k+</div>
-                <div className="text-sm text-primary-100">Pacientes</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-primary-200">98%</div>
-                <div className="text-sm text-primary-100">Satisfacción</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Image/Illustration */}
-          <div className="hidden lg:block">
-            <div className="relative">
-              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20">
-                <div className="text-center">
-                  <div className="w-24 h-24 bg-primary-200 rounded-full mx-auto mb-6 flex items-center justify-center">
-                    <svg className="w-12 h-12 text-primary-700" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <h3 className="text-xl font-semibold text-white mb-2">
-                    Atención Personalizada
-                  </h3>
-                  <p className="text-primary-100">
-                    Nuestros profesionales están aquí para ayudarte en tu camino hacia el bienestar mental.
-                  </p>
-                </div>
-              </div>
-              
-              {/* Floating elements */}
-              <div className="absolute -top-4 -right-4 bg-primary-200 rounded-full p-3">
-                <svg className="w-6 h-6 text-primary-700" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="absolute -bottom-4 -left-4 bg-primary-300 rounded-full p-3">
-                <svg className="w-6 h-6 text-primary-700" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z" />
-                  <path d="M15 7v2a4 4 0 01-4 4H9.828l-1.766 1.767c.28.149.599.233.938.233h2l3 3v-3h2a2 2 0 002-2V9a2 2 0 00-2-2h-1z" />
-                </svg>
-              </div>
-            </div>
-          </div>
+          </ScrollReveal>
+        </div>
+        
+        {/* Bottom Wave Divider */}
+        <div className="absolute bottom-0 w-full z-20 leading-none pointer-events-none">
+          <svg viewBox="0 0 1440 320" className="w-full h-auto text-surface-off fill-current" preserveAspectRatio="none">
+            <path d="M0,160L48,176C96,192,192,224,288,218.7C384,213,480,171,576,149.3C672,128,768,128,864,154.7C960,181,1056,235,1152,240C1248,245,1344,203,1392,181.3L1440,160L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
+          </svg>
         </div>
       </div>
 
-      {/* Scroll indicator */}
-      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2">
-        <div className="animate-bounce">
-          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-          </svg>
+      {/* Cards Section (Overlapping the wave) */}
+      <div className="relative z-30 -mt-24 md:-mt-40 pb-20">
+        <div className="container mx-auto px-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 max-w-6xl mx-auto">
+            
+            {/* Highlighted Card 1 */}
+            <ScrollReveal direction="left" delay={0.1} className="bg-gradient-to-br from-primary-500 to-primary-700 p-8 lg:p-10 rounded-3xl shadow-[0_20px_40px_-15px_rgba(20,184,166,0.5)] transform hover:-translate-y-2 transition-all duration-300 group">
+              <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mb-6 text-white backdrop-blur-sm group-hover:scale-110 transition-transform">
+                <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                </svg>
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-4">Evaluaciones</h3>
+              <p className="text-primary-50 mb-8 text-sm leading-relaxed opacity-90">
+                Asegura un diagnóstico certero con nuestro sistema inteligente. Encuentra exactamente el especialista que entiende y puede manejar tu caso particular.
+              </p>
+              <Link to="/evaluacion-emocional" className="inline-block bg-white text-primary-700 font-semibold px-6 py-3 rounded-xl text-sm hover:bg-gray-50 transition-colors shadow-sm">
+                Ver más
+              </Link>
+            </ScrollReveal>
+
+            {/* White Card 2 */}
+            <ScrollReveal direction="up" delay={0.3} className="bg-white p-8 lg:p-10 rounded-3xl shadow-xl border border-gray-100 transform hover:-translate-y-2 transition-all duration-300 group">
+              <div className="w-14 h-14 bg-primary-50 text-primary-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-primary-100 transition-all">
+                <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">Sesiones Online</h3>
+              <p className="text-gray-600 mb-8 text-sm leading-relaxed">
+                Toma terapia desde tu entorno seguro. Conéctate con profesionales calificados de manera remota con total privacidad y flexibilidad horaria.
+              </p>
+              <Link to="/sesiones" className="inline-block bg-primary-600 text-white font-semibold px-6 py-3 rounded-xl text-sm hover:bg-primary-700 transition-colors shadow-sm">
+                Ver más
+              </Link>
+            </ScrollReveal>
+
+            {/* White Card 3 */}
+            <ScrollReveal direction="right" delay={0.5} className="bg-white p-8 lg:p-10 rounded-3xl shadow-xl border border-gray-100 transform hover:-translate-y-2 transition-all duration-300 group">
+              <div className="w-14 h-14 bg-primary-50 text-primary-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-primary-100 transition-all">
+                <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">Mide tu Avance</h3>
+              <p className="text-gray-600 mb-8 text-sm leading-relaxed">
+                Visualiza tu evolución emocional. Mide tu progreso mediante gráficas intuitivas para asegurar que estás alcanzando tus metas personales.
+              </p>
+              <Link to="/mis-resultados" className="inline-block bg-primary-600 text-white font-semibold px-6 py-3 rounded-xl text-sm hover:bg-primary-700 transition-colors shadow-sm">
+                Ver más
+              </Link>
+            </ScrollReveal>
+
+          </div>
         </div>
       </div>
     </div>

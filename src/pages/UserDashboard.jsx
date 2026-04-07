@@ -502,8 +502,12 @@ const UserDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div className="min-h-screen bg-gradient-to-br from-surface-off via-primary-50 to-secondary-50 relative overflow-hidden">
+      {/* Decorative background blobs for fluid feel */}
+      <div className="absolute top-[10%] left-[-10%] w-96 h-96 bg-primary-300 rounded-full mix-blend-multiply filter blur-[80px] opacity-20 animate-float-slow"></div>
+      <div className="absolute bottom-[20%] right-[-10%] w-[30rem] h-[30rem] bg-secondary-300 rounded-full mix-blend-multiply filter blur-[80px] opacity-20 animate-float-slow" style={{ animationDelay: '2s' }}></div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative z-10 animate-fade-in-up">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
@@ -660,7 +664,9 @@ const UserDashboard = () => {
         {/* Estado de evaluación */}
         <div className="mb-8">
           {!hasCompletedEvaluation ? (
-            <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl shadow-lg p-8 text-white">
+            <div className="glass-panel overflow-hidden relative rounded-3xl p-8 bg-gradient-to-br from-white/60 to-white/30 border border-white/50">
+              {/* Blur accent */}
+              <div className="absolute -top-20 -right-20 w-64 h-64 bg-primary-200 rounded-full mix-blend-multiply filter blur-3xl opacity-50"></div>
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <h2 className="text-2xl font-bold mb-2">
@@ -672,14 +678,14 @@ const UserDashboard = () => {
                   </p>
                   <button
                     onClick={handleStartEvaluation}
-                    className="bg-white text-blue-600 px-6 py-3 rounded-lg font-medium hover:bg-blue-50 transition-colors duration-200 shadow-lg"
+                    className="bg-primary-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-primary-700 transition-colors duration-200 shadow-md"
                   >
                     Empezar Evaluación
                   </button>
                 </div>
-                <div className="ml-8">
-                  <div className="w-24 h-24 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-                    <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="ml-8 relative z-10">
+                  <div className="w-24 h-24 bg-primary-100 rounded-[2rem] flex items-center justify-center shadow-inner">
+                    <svg className="w-12 h-12 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
@@ -687,7 +693,8 @@ const UserDashboard = () => {
               </div>
             </div>
           ) : isSearchingProfessional ? (
-            <div className="bg-gradient-to-r from-yellow-500 to-orange-600 rounded-xl shadow-lg p-8 text-white">
+            <div className="glass-panel overflow-hidden relative rounded-3xl p-8 bg-gradient-to-br from-amber-50/80 to-white/40 border border-white/50">
+              <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-amber-200 rounded-full mix-blend-multiply filter blur-3xl opacity-40"></div>
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <h2 className="text-2xl font-bold mb-2">
@@ -712,38 +719,44 @@ const UserDashboard = () => {
               </div>
             </div>
           ) : assignedProfessional ? (
-            <div className="bg-gradient-to-r from-green-500 to-teal-600 rounded-xl shadow-lg p-8 text-white">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <h2 className="text-2xl font-bold mb-2">
+            <div className="glass-panel overflow-hidden relative rounded-3xl p-8 sm:p-10 bg-gradient-to-br from-primary-50/80 to-secondary-50/40 border border-white/60">
+              <div className="absolute -top-20 -right-20 w-80 h-80 bg-primary-200/50 rounded-full mix-blend-multiply filter blur-3xl opacity-40"></div>
+              <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-secondary-200/50 rounded-full mix-blend-multiply filter blur-3xl opacity-40"></div>
+              <div className="flex flex-col lg:flex-row items-center lg:items-start justify-between relative z-10 gap-8">
+                <div className="flex-1 w-full">
+                  <h2 className="text-3xl font-extrabold text-gray-900 mb-2">
                     ¡Profesional asignado!
                   </h2>
-                  <p className="text-green-100 mb-4">
+                  <p className="text-gray-600 mb-6 font-medium text-lg">
                     Hemos encontrado el profesional ideal para ti:
                   </p>
-                  <div className="mb-6 bg-white bg-opacity-10 rounded-lg p-4">
-                    <h3 className="font-bold text-lg text-white">{assignedProfessional.name}</h3>
-                    <p className="text-green-100">{assignedProfessional.specialty || assignedProfessional.speciality || assignedProfessional.specialities?.[0]}</p>
-                    <p className="text-green-100 text-sm">⭐ {assignedProfessional.calificacion_promedio || assignedProfessional.rating || 'N/A'}/5</p>
-                    {assignedProfessional.phone && (
-                      <p className="text-green-100 text-sm">📞 {assignedProfessional.phone}</p>
-                    )}
-                    {assignedProfessional.email && (
-                      <p className="text-green-100 text-sm">✉️ {assignedProfessional.email}</p>
+                  <div className="mb-6 bg-white/60 backdrop-blur-md rounded-2xl p-6 shadow-sm border border-gray-100">
+                    <h3 className="font-bold text-2xl text-primary-700">{assignedProfessional.name}</h3>
+                    <p className="text-gray-600 font-medium">{assignedProfessional.specialty || assignedProfessional.speciality || assignedProfessional.specialities?.[0]}</p>
+                    <div className="flex items-center gap-4 mt-2 mb-4">
+                      <span className="bg-yellow-100 text-yellow-800 text-xs font-semibold px-2.5 py-0.5 rounded-full flex items-center">
+                        ⭐ {assignedProfessional.calificacion_promedio || assignedProfessional.rating || 'N/A'}
+                      </span>
+                    </div>
+                    {(assignedProfessional.phone || assignedProfessional.email) && (
+                      <div className="space-y-1 mb-4 text-sm text-gray-600 bg-white/40 p-3 rounded-xl">
+                        {assignedProfessional.phone && <p>📞 {assignedProfessional.phone}</p>}
+                        {assignedProfessional.email && <p>✉️ {assignedProfessional.email}</p>}
+                      </div>
                     )}
                     {userStats?.careStatus && (
-                      <div className="mt-3 text-sm text-green-100">
-                        <p><strong>Estado de atención:</strong> {userStats.careStatus}</p>
+                      <div className="mt-4 text-sm bg-primary-50/50 p-4 rounded-xl border border-primary-100">
+                        <p className="text-primary-900"><strong className="text-primary-700">Estado de atención:</strong> {userStats.careStatus}</p>
                         {userStats.careProgress && (
-                          <p><strong>Progreso:</strong> {userStats.careProgress}</p>
+                          <p className="text-primary-800 mt-1"><strong className="text-primary-700">Progreso:</strong> {userStats.careProgress}</p>
                         )}
                       </div>
                     )}
                   </div>
-                  <div className="flex flex-wrap gap-3">
+                  <div className="flex flex-wrap gap-4">
                     <button
                       onClick={handleStartChat}
-                      className="bg-white text-green-600 px-6 py-3 rounded-lg font-medium hover:bg-green-50 transition-colors duration-200 shadow-lg flex items-center space-x-2"
+                      className="bg-primary-600 text-white px-8 py-3.5 rounded-xl font-medium hover:bg-primary-700 hover:-translate-y-1 hover:shadow-lg transition-all duration-300 flex items-center space-x-2"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -752,29 +765,29 @@ const UserDashboard = () => {
                     </button>
                     <button
                       onClick={handleViewResults}
-                      className="bg-white text-green-600 px-6 py-3 rounded-lg font-medium hover:bg-green-50 transition-colors duration-200 shadow-lg"
+                      className="glass-panel text-gray-700 px-6 py-3.5 rounded-xl font-medium hover:bg-white/90 hover:-translate-y-1 transition-all duration-300"
                     >
                       Ver Evaluaciones
                     </button>
                     <button
                       onClick={handleStartEvaluation}
-                      className="bg-white bg-opacity-20 text-white px-6 py-3 rounded-lg font-medium hover:bg-opacity-30 transition-colors duration-200 border border-white border-opacity-30"
+                      className="border border-gray-300 bg-white/30 text-gray-700 px-6 py-3.5 rounded-xl font-medium hover:bg-white/50 transition-all duration-300"
                     >
                       Nueva Evaluación
                     </button>
                   </div>
                 </div>
-                <div className="ml-8">
-                  <div className="w-24 h-24 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-                    <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                <div className="flex-shrink-0 animate-float-slow">
+                  <div className="w-32 h-32 bg-white/70 backdrop-blur-md rounded-[2.5rem] flex items-center justify-center shadow-soft border border-white">
+                    <svg className="w-16 h-16 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
                   </div>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="bg-gradient-to-r from-green-500 to-teal-600 rounded-xl shadow-lg p-8 text-white">
+            <div className="glass-panel overflow-hidden relative rounded-3xl p-8 bg-gradient-to-br from-green-50/80 to-emerald-50/40 border border-white/60">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <h2 className="text-2xl font-bold mb-2">

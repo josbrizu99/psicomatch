@@ -1,4 +1,5 @@
 import React from 'react';
+import ScrollReveal from '../common/ScrollReveal';
 
 const Testimonials = () => {
     const testimonials = [
@@ -56,20 +57,22 @@ const Testimonials = () => {
         <section className="py-20 bg-gray-50">
             <div className="container mx-auto px-6">
                 {/* Header */}
-                <div className="text-center mb-16">
+                <ScrollReveal direction="up" className="text-center mb-16">
                     <h2 className="text-4xl font-bold text-gray-900 mb-4">
                         Lo Que Dicen Nuestros Usuarios
                     </h2>
                     <p className="text-xl text-gray-600 max-w-2xl mx-auto">
                         Miles de personas han transformado su bienestar mental con PsicoMatch
                     </p>
-                </div>
+                </ScrollReveal>
 
                 {/* Testimonials Grid */}
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {testimonials.map((testimonial, index) => (
-                        <div
+                        <ScrollReveal
                             key={index}
+                            direction={index % 2 === 0 ? "left" : "right"}
+                            delay={index * 0.15}
                             className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow duration-300"
                         >
                             {/* Stars */}
@@ -105,12 +108,12 @@ const Testimonials = () => {
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        </ScrollReveal>
                     ))}
                 </div>
 
                 {/* Trust Indicators */}
-                <div className="mt-16 grid md:grid-cols-3 gap-8 text-center">
+                <ScrollReveal direction="up" delay={0.4} className="mt-16 grid md:grid-cols-3 gap-8 text-center">
                     <div>
                         <div className="text-3xl font-bold text-primary-600 mb-2">4.9/5</div>
                         <div className="text-gray-600">Calificación Promedio</div>
@@ -123,7 +126,7 @@ const Testimonials = () => {
                         <div className="text-3xl font-bold text-primary-600 mb-2">98%</div>
                         <div className="text-gray-600">Recomendarían PsicoMatch</div>
                     </div>
-                </div>
+                </ScrollReveal>
             </div>
         </section>
     );

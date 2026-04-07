@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase/firebase';
 import SkeletonLoader from '../common/SkeletonLoader';
+import ScrollReveal from '../common/ScrollReveal';
 
 const FeaturedProfessionals = () => {
     const [professionals, setProfessionals] = useState([]);
@@ -60,7 +61,10 @@ const FeaturedProfessionals = () => {
                 // Ordenar por rating descendente (en cliente)
                 prosData.sort((a, b) => b.rating - a.rating);
 
-                setProfessionals(prosData);
+                // Limitar a 4 profesionales
+                const topProfessionals = prosData.slice(0, 4);
+
+                setProfessionals(topProfessionals);
             } catch (error) {
                 console.error("❌ Error fetching professionals:", error);
 
@@ -156,20 +160,22 @@ const FeaturedProfessionals = () => {
         <section className="py-20 bg-white">
             <div className="container mx-auto px-6">
                 {/* Header */}
-                <div className="text-center mb-16">
+                <ScrollReveal direction="up" className="text-center mb-16">
                     <h2 className="text-4xl font-bold text-gray-900 mb-4">
                         Profesionales Destacados
                     </h2>
                     <p className="text-xl text-gray-600 max-w-2xl mx-auto">
                         Conoce a algunos de nuestros profesionales mejor calificados
                     </p>
-                </div>
+                </ScrollReveal>
 
                 {/* Professionals Grid */}
                 <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-                    {professionals.map((professional) => (
-                        <div
+                    {professionals.map((professional, index) => (
+                        <ScrollReveal
                             key={professional.id}
+                            direction={index % 2 === 0 ? "scale" : "up"}
+                            delay={index * 0.15}
                             className="bg-white rounded-2xl border-2 border-gray-100 hover:border-primary-200 hover:shadow-xl transition-all duration-300 overflow-hidden group h-full flex flex-col"
                         >
                             {/* Card Header */}
@@ -248,12 +254,12 @@ const FeaturedProfessionals = () => {
                                     Ver Perfil
                                 </Link>
                             </div>
-                        </div>
+                        </ScrollReveal>
                     ))}
                 </div>
 
                 {/* View All CTA */}
-                <div className="text-center mt-12">
+                <ScrollReveal direction="up" delay={0.4} className="text-center mt-12">
                     <Link
                         to="/buscar-profesionales"
                         className="inline-flex items-center space-x-2 text-primary-600 font-semibold hover:text-primary-700 transition-colors duration-300 group"
@@ -263,7 +269,7 @@ const FeaturedProfessionals = () => {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                         </svg>
                     </Link>
-                </div>
+                </ScrollReveal>
             </div>
         </section>
     );

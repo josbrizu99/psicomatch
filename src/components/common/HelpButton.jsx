@@ -11,6 +11,22 @@ import {
  */
 const HelpButton = ({ userType = 'user' }) => {
     const [showMenu, setShowMenu] = React.useState(false);
+    const [isVisible, setIsVisible] = React.useState(true);
+
+    // Ocultar botón al hacer scroll hacia abajo (inverso al ScrollToTopButton)
+    React.useEffect(() => {
+        const toggleVisibility = () => {
+            if (window.pageYOffset > 300) {
+                setIsVisible(false);
+                setShowMenu(false); // También cerrar el menú si se oculta
+            } else {
+                setIsVisible(true);
+            }
+        };
+
+        window.addEventListener('scroll', toggleVisibility);
+        return () => window.removeEventListener('scroll', toggleVisibility);
+    }, []);
 
     const handleRestartTour = () => {
         resetOnboarding(userType);
@@ -26,6 +42,8 @@ const HelpButton = ({ userType = 'user' }) => {
         featureTour(feature);
         setShowMenu(false);
     };
+
+    if (!isVisible) return null;
 
     return (
         <div className="fixed bottom-28 right-8 z-50">

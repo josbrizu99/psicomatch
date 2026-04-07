@@ -151,25 +151,29 @@ const Login = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
+    <div className="min-h-screen bg-gradient-to-br from-surface-off via-primary-50 to-secondary-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+      {/* Decorative background blobs for fluid feel */}
+      <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-primary-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-float-slow"></div>
+      <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-secondary-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-float-slow" style={{ animationDelay: '2s' }}></div>
+
+      <div className="max-w-md w-full space-y-8 relative z-10 animate-fade-in">
+        <div className="animate-fade-in-up">
           <Link to="/" className="flex justify-center">
-            <span className="text-3xl font-bold text-primary-600">Psicomatch</span>
+            <span className="text-4xl font-extrabold text-primary-600 tracking-tight">Psicomatch</span>
           </Link>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          <h2 className="mt-6 text-center text-3xl font-bold text-gray-800">
             Inicia sesión en tu cuenta
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+          <p className="mt-3 text-center text-sm text-gray-500">
             ¿No tienes una cuenta?{' '}
-            <Link to="/crear-cuenta" className="font-medium text-primary-600 hover:text-primary-500">
+            <Link to="/crear-cuenta" className="font-medium text-primary-600 hover:text-primary-700 transition-colors">
               Regístrate aquí
             </Link>
           </p>
         </div>
         
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="bg-white rounded-xl shadow-lg p-8">
+          <div className="glass-panel p-8 sm:p-10 rounded-[2rem] animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
             <div className="space-y-6">
               {/* Mensaje de error */}
               {error && (
@@ -199,7 +203,7 @@ const Login = () => {
                   required
                   value={formData.email}
                   onChange={handleChange}
-                  className="appearance-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
+                  className="appearance-none relative block w-full px-4 py-3 bg-white/60 border border-gray-200 placeholder-gray-400 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent transition-all shadow-sm sm:text-sm"
                   placeholder="tu@email.com"
                   disabled={loading || googleLoading}
                 />
@@ -218,7 +222,7 @@ const Login = () => {
                     required
                     value={formData.password}
                     onChange={handleChange}
-                    className="appearance-none relative block w-full px-3 py-3 pr-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
+                    className="appearance-none relative block w-full px-4 py-3 pr-10 bg-white/60 border border-gray-200 placeholder-gray-400 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent transition-all shadow-sm sm:text-sm"
                     placeholder="Tu contraseña"
                     disabled={loading || googleLoading}
                   />
@@ -271,7 +275,7 @@ const Login = () => {
                 <button
                   type="submit"
                   disabled={loading || googleLoading}
-                  className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors duration-200 disabled:bg-primary-400 disabled:cursor-not-allowed"
+                  className="group relative w-full flex justify-center py-3.5 px-4 border border-transparent text-sm font-medium rounded-xl text-white bg-primary-600 hover:bg-primary-700 hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-all duration-300 disabled:bg-primary-400 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none shadow-[0_4px_14px_0_rgba(20,184,166,0.39)]"
                 >
                   {loading ? (
                     <div className="flex items-center">
@@ -284,7 +288,7 @@ const Login = () => {
                   ) : (
                     <>
                       <span className="absolute left-0 inset-y-0 flex items-center pl-3">
-                        <svg className="h-5 w-5 text-primary-500 group-hover:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="h-5 w-5 text-primary-200 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
                         </svg>
                       </span>
@@ -308,7 +312,7 @@ const Login = () => {
                   type="button"
                   onClick={handleGoogleLogin}
                   disabled={loading || googleLoading}
-                  className="w-full flex justify-center items-center py-3 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full flex justify-center items-center py-3.5 px-4 border border-gray-200 rounded-xl shadow-sm bg-white/80 backdrop-blur-sm text-sm font-medium text-gray-700 hover:bg-gray-50 hover:shadow-md hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-sm"
                 >
                   {googleLoading ? (
                     <div className="flex items-center">

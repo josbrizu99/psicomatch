@@ -2225,7 +2225,7 @@ const ProfessionalDashboard = () => {
                       <select
                         value={selectedPatientForSession}
                         onChange={(e) => setSelectedPatientForSession(e.target.value)}
-                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900"
                       >
                         <option value="">Selecciona un paciente</option>
                         {patients.map((patient) => (
@@ -2277,7 +2277,7 @@ const ProfessionalDashboard = () => {
                     <select
                       value={newSessionType}
                       onChange={(e) => setNewSessionType(e.target.value)}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900"
                     >
                       <option value="consultation">Consulta</option>
                       <option value="evaluation">Evaluación</option>
@@ -2294,7 +2294,7 @@ const ProfessionalDashboard = () => {
                       value={newSessionDate}
                       onChange={(e) => setNewSessionDate(e.target.value)}
                       min={new Date().toISOString().split('T')[0]}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900"
                       required
                     />
                   </div>
@@ -2306,7 +2306,7 @@ const ProfessionalDashboard = () => {
                       type="time"
                       value={newSessionTime}
                       onChange={(e) => setNewSessionTime(e.target.value)}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900"
                       required
                     />
                   </div>
@@ -2688,7 +2688,7 @@ const ProfessionalDashboard = () => {
                     min="1"
                     value={newEstimatedSessions}
                     onChange={(e) => setNewEstimatedSessions(e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
                     placeholder="Ej: 10"
                   />
                   <p className="text-xs text-gray-500 mt-1">
@@ -2748,7 +2748,7 @@ const ProfessionalDashboard = () => {
                     min="1"
                     value={sessionsToAdd}
                     onChange={(e) => setSessionsToAdd(e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
                     placeholder="Ej: 5"
                   />
                   {sessionsToAdd && !isNaN(sessionsToAdd) && parseInt(sessionsToAdd) > 0 && (

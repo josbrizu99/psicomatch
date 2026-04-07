@@ -43,7 +43,7 @@ const FAQ = () => {
     };
 
     return (
-        <section className="py-20 pb-100 bg-white">{/* Increased to pb-40 (10rem) for ChatButton space */}
+        <section className="py-20 pb-32 bg-white">{/* Extra padding for floating buttons */}
             <div className="container mx-auto px-6">
                 {/* Header */}
                 <div className="text-center mb-16">

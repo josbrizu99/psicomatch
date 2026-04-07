@@ -1,5 +1,5 @@
 # 📊 Reporte Ejecutivo de Calidad y Rendimiento - PsicoMatch
-**Fecha de Emisión:** 8/12/2025, 12:34:33 a. m.
+**Fecha de Emisión:** 11/12/2025, 7:01:15 p. m.
 **Entorno de Pruebas:** Localhost (Desarrollo)
 
 ## 1. Resumen Ejecutivo
@@ -33,9 +33,9 @@ El rendimiento se evalúa basándose en la experiencia de usuario. Tiempos menor
 
 | Página Auditada | T. Obtenido | Calificación | Impacto en Usuario |
 |-----------------|-------------|--------------|--------------------|
-| **Inicio (Landing)** | **823.30 ms** | 🚀 Excelente | Experiencia instantánea. Percepción fluida. |
-| **Registro** | **328.07 ms** | 🚀 Excelente | Experiencia instantánea. Percepción fluida. |
-| **Portal Profesional** | **86.04 ms** | 🚀 Excelente | Experiencia instantánea. Percepción fluida. |
+| **Inicio (Landing)** | **929.01 ms** | 🚀 Excelente | Experiencia instantánea. Percepción fluida. |
+| **Registro** | **327.10 ms** | 🚀 Excelente | Experiencia instantánea. Percepción fluida. |
+| **Portal Profesional** | **85.45 ms** | 🚀 Excelente | Experiencia instantánea. Percepción fluida. |
 
 > **Nota Técnica:** Los tiempos medidos en entorno local (Dev) suelen ser superiores a Producción debido a la falta de minificación y optimización del servidor de desarrollo. Se espera una mejora del 30-50% en el build final.
 

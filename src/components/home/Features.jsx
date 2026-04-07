@@ -1,4 +1,5 @@
 import React from 'react';
+import ScrollReveal from '../common/ScrollReveal';
 
 const Features = () => {
     const features = [
@@ -68,21 +69,23 @@ const Features = () => {
         <section className="py-20 bg-white">
             <div className="container mx-auto px-6">
                 {/* Header */}
-                <div className="text-center mb-16">
+                <ScrollReveal direction="up" className="text-center mb-16">
                     <h2 className="text-4xl font-bold text-gray-900 mb-4">
                         ¿Por Qué Elegir PsicoMatch?
                     </h2>
                     <p className="text-xl text-gray-600 max-w-2xl mx-auto">
                         Ofrecemos una experiencia completa y segura para tu bienestar mental
                     </p>
-                </div>
+                </ScrollReveal>
 
                 {/* Features Grid */}
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {features.map((feature, index) => (
-                        <div
+                        <ScrollReveal
                             key={index}
-                            className="group p-6 rounded-xl border-2 border-gray-100 hover:border-primary-200 hover:shadow-lg transition-all duration-300"
+                            direction={['right', 'scale', 'left'][index % 3]}
+                            delay={index * 0.1}
+                            className="group p-6 rounded-xl border-2 border-gray-100 hover:border-primary-200 hover:shadow-lg transition-all duration-300 bg-white"
                         >
                             {/* Icon */}
                             <div className={`${feature.color} w-16 h-16 rounded-lg flex items-center justify-center text-white mb-4 group-hover:scale-110 transition-transform duration-300`}>
@@ -96,12 +99,12 @@ const Features = () => {
                             <p className="text-gray-600 leading-relaxed">
                                 {feature.description}
                             </p>
-                        </div>
+                        </ScrollReveal>
                     ))}
                 </div>
 
                 {/* Trust Badge */}
-                <div className="mt-16 bg-gradient-to-r from-primary-50 to-secondary-50 rounded-2xl p-8 text-center">
+                <ScrollReveal direction="up" delay={0.4} className="mt-16 bg-gradient-to-r from-primary-50 to-secondary-50 rounded-2xl p-8 text-center">
                     <div className="flex items-center justify-center space-x-2 mb-4">
                         <svg className="w-6 h-6 text-primary-600" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
@@ -112,7 +115,7 @@ const Features = () => {
                         PsicoMatch cumple con todas las normativas de privacidad y protección de datos de salud mental.
                         Tus datos están seguros con nosotros.
                     </p>
-                </div>
+                </ScrollReveal>
             </div>
         </section>
     );

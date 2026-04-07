@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { doc, updateDoc, serverTimestamp, increment } from 'firebase/firestore';
 import { db } from '../firebase/firebase';
-import { 
-  getActiveEvaluationTests, 
+import {
+  getActiveEvaluationTests,
   determineTestFromCategorization,
   calculateTestScore,
   interpretTestResults,
@@ -37,7 +37,7 @@ const EvaluacionEmocionalPage = () => {
       navigate('/login');
       return;
     }
-    
+
     console.log('🔄 useEffect ejecutándose - cargando tests disponibles...');
     loadAvailableTests();
   }, [currentUser, navigate]);
@@ -57,22 +57,22 @@ const EvaluacionEmocionalPage = () => {
       console.log('🔄 Cargando tests disponibles...');
       setLoading(true);
       const result = await getActiveEvaluationTests();
-      
+
       console.log('📊 Resultado de carga de tests:', result);
-      
+
       if (result.success) {
         setAvailableTests(result.tests);
-        
+
         // Recopilar todas las preguntas de categorización de todos los tests
         const allQuestions = [];
         result.tests.forEach(test => {
-          console.log('🔍 Procesando test:', { 
-            id: test.id, 
-            title: test.title, 
+          console.log('🔍 Procesando test:', {
+            id: test.id,
+            title: test.title,
             hasCategorizationQuestions: !!test.categorizationQuestions,
             categorizationQuestionsCount: test.categorizationQuestions?.length || 0
           });
-          
+
           if (test.categorizationQuestions && test.categorizationQuestions.length > 0) {
             test.categorizationQuestions.forEach(question => {
               console.log('❓ Agregando pregunta de categorización:', question.text);
@@ -87,18 +87,18 @@ const EvaluacionEmocionalPage = () => {
             console.log('⚠️ Test sin preguntas de categorización:', test.title);
           }
         });
-        
+
         // Eliminar preguntas duplicadas (mismo texto)
-        const uniqueQuestions = allQuestions.filter((question, index, self) => 
+        const uniqueQuestions = allQuestions.filter((question, index, self) =>
           index === self.findIndex(q => q.text === question.text)
         );
-        
+
         console.log('📊 Preguntas antes de eliminar duplicados:', allQuestions.length);
         console.log('📊 Preguntas después de eliminar duplicados:', uniqueQuestions.length);
         console.log('❓ Preguntas únicas:', uniqueQuestions.map(q => ({ text: q.text, sourceTest: q.sourceTestTitle })));
-        
+
         setAllCategorizationQuestions(uniqueQuestions);
-        
+
         console.log('✅ Tests cargados exitosamente:', result.tests.length);
         console.log('📋 Tests disponibles:', result.tests.map(t => ({ id: t.id, title: t.title, state: t.state })));
         console.log('❓ Preguntas de categorización recopiladas:', uniqueQuestions.length);
@@ -120,60 +120,60 @@ const EvaluacionEmocionalPage = () => {
     console.log('❓ Preguntas de categorización:', allCategorizationQuestions.length);
     console.log('👤 Usuario:', currentUser?.uid);
     console.log('🔍 Profesional asignado:', userData?.matchedProfessional);
-    
+
     // Si el usuario ya tiene un profesional asignado, mostrar modal de confirmación
-    if (userData?.matchedProfessional && 
-        userData.matchedProfessional !== 'null' && 
-        userData.matchedProfessional !== 'searching') {
+    if (userData?.matchedProfessional &&
+      userData.matchedProfessional !== 'null' &&
+      userData.matchedProfessional !== 'searching') {
       console.log('⚠️ Usuario tiene profesional, mostrando modal de confirmación');
       setShowConfirmModal(true);
       return;
     }
-    
+
     console.log('✅ Procediendo con la evaluación...');
-    
+
     // Crear sesión de evaluación
     const sessionResult = await createUserSession(
-      currentUser.uid, 
-      userData?.matchedProfessional || 'none', 
+      currentUser.uid,
+      userData?.matchedProfessional || 'none',
       'evaluation'
     );
-    
+
     if (sessionResult.success) {
       setCurrentSessionId(sessionResult.sessionId);
       console.log('✅ Sesión de evaluación creada:', sessionResult.sessionId);
     } else {
       console.error('❌ Error al crear sesión:', sessionResult.error);
     }
-    
+
     // Ir directamente a las preguntas de categorización (sin seleccionar test aún)
     console.log('📝 Iniciando preguntas de categorización');
     setSelectedTest(null); // No seleccionar test aún
     setCurrentStep('categorization');
     setCurrentQuestionIndex(0);
     setCategorizationAnswers({});
-    
+
     console.log('🎯 Evaluación iniciada, paso actual:', 'categorization');
   };
 
   const handleConfirmNewEvaluation = async () => {
     console.log('🎯 FUNCIÓN handleConfirmNewEvaluation EJECUTÁNDOSE');
     setShowConfirmModal(false);
-    
+
     // Crear sesión de evaluación
     const sessionResult = await createUserSession(
-      currentUser.uid, 
-      userData?.matchedProfessional || 'none', 
+      currentUser.uid,
+      userData?.matchedProfessional || 'none',
       'evaluation'
     );
-    
+
     if (sessionResult.success) {
       setCurrentSessionId(sessionResult.sessionId);
       console.log('✅ Sesión de evaluación creada:', sessionResult.sessionId);
     } else {
       console.error('❌ Error al crear sesión:', sessionResult.error);
     }
-    
+
     // Ir directamente a las preguntas de categorización (sin seleccionar test aún)
     setSelectedTest(null); // No seleccionar test aún
     setCurrentStep('categorization');
@@ -192,10 +192,10 @@ const EvaluacionEmocionalPage = () => {
     // Verificar si hay riesgo suicida en las respuestas
     const question = allCategorizationQuestions.find(q => q.id === questionId);
     const selectedOption = question?.options?.find(opt => opt.id === answerId);
-    
-    if (selectedOption?.text?.toLowerCase().includes('suicid') || 
-        selectedOption?.text?.toLowerCase().includes('daño') ||
-        selectedOption?.text?.toLowerCase().includes('morir')) {
+
+    if (selectedOption?.text?.toLowerCase().includes('suicid') ||
+      selectedOption?.text?.toLowerCase().includes('daño') ||
+      selectedOption?.text?.toLowerCase().includes('morir')) {
       setShowSuicidalAlert(true);
       setCurrentStep('suicidal-risk');
       return;
@@ -203,7 +203,7 @@ const EvaluacionEmocionalPage = () => {
 
     // Si es la última pregunta de categorización, determinar qué test aplicar
     const isLastQuestion = currentQuestionIndex === (allCategorizationQuestions.length - 1);
-    
+
     if (isLastQuestion) {
       console.log('🎯 Última pregunta de categorización completada, determinando test...');
       const determinedTest = determineTestFromCategorization(newAnswers, availableTests);
@@ -253,7 +253,7 @@ const EvaluacionEmocionalPage = () => {
       const score = calculateTestScore(selectedTest, testAnswers);
       const interpretation = interpretTestResults(selectedTest, score);
       const specialties = getTestSpecialties(selectedTest);
-      
+
       const results = {
         testId: selectedTest.id,
         testTitle: selectedTest.title,
@@ -262,9 +262,9 @@ const EvaluacionEmocionalPage = () => {
         specialties: specialties,
         completedAt: serverTimestamp()
       };
-      
+
       setTestResults(results);
-      
+
       // Guardar resultados del test en la colección userTestResults
       const saveResults = await saveUserTestResults(
         currentUser.uid,
@@ -273,13 +273,13 @@ const EvaluacionEmocionalPage = () => {
         score,
         interpretation
       );
-      
+
       if (saveResults.success) {
         console.log('✅ Resultados del test guardados:', saveResults.resultId);
       } else {
         console.error('❌ Error al guardar resultados:', saveResults.error);
       }
-      
+
       // Finalizar sesión de evaluación
       if (currentSessionId) {
         const endSessionResult = await endUserSession(currentSessionId, 0, 'Evaluación completada');
@@ -289,7 +289,7 @@ const EvaluacionEmocionalPage = () => {
           console.error('❌ Error al finalizar sesión:', endSessionResult.error);
         }
       }
-      
+
       // Actualizar datos del usuario
       await updateDoc(doc(db, 'users', currentUser.uid), {
         testProgress: 'completed',
@@ -308,7 +308,7 @@ const EvaluacionEmocionalPage = () => {
 
       // Mostrar pantalla de búsqueda por 5 segundos
       setCurrentStep('searching');
-      
+
       // Buscar profesional automáticamente
       const matchingResult = await findMatchingProfessional(
         currentUser.uid,
@@ -322,7 +322,7 @@ const EvaluacionEmocionalPage = () => {
           console.log('✅ Profesional encontrado:', matchingResult.professional);
           setAssignedProfessional(matchingResult.professional);
           setCurrentStep('completed');
-          
+
           // Refrescar los datos del usuario después de asignar profesional
           console.log('🔄 Refrescando datos del usuario después de asignar profesional...');
           await refreshUserData();
@@ -347,11 +347,11 @@ const EvaluacionEmocionalPage = () => {
         console.log('✅ Sesión finalizada al navegar al dashboard');
       }
     }
-    
+
     // Refrescar los datos del usuario antes de navegar al dashboard
     console.log('🔄 Refrescando datos del usuario antes de ir al dashboard...');
     await refreshUserData();
-    
+
     navigate('/dashboard');
   };
 
@@ -411,11 +411,11 @@ const EvaluacionEmocionalPage = () => {
                 Evaluación Emocional
               </h1>
               <p className="text-lg text-gray-600 mb-6">
-                Realiza nuestra evaluación personalizada para encontrar el profesional 
+                Realiza nuestra evaluación personalizada para encontrar el profesional
                 más adecuado para tus necesidades específicas.
               </p>
             </div>
-            
+
             <div className="space-y-4 mb-8">
               <p className="text-gray-500">
                 La evaluación incluye:
@@ -441,7 +441,7 @@ const EvaluacionEmocionalPage = () => {
                 </li>
               </ul>
             </div>
-            
+
             <div className="space-y-4">
               <button
                 onClick={() => {
@@ -455,7 +455,7 @@ const EvaluacionEmocionalPage = () => {
                 </svg>
                 Empezar Evaluación Emocional
               </button>
-              
+
               <button
                 onClick={() => navigate('/dashboard')}
                 className="w-full inline-flex items-center justify-center px-6 py-3 border border-gray-300 text-base font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors duration-200"
@@ -463,7 +463,7 @@ const EvaluacionEmocionalPage = () => {
                 <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
-                Ir al Dashboard
+                Ir a mi Panel Principal
               </button>
 
             </div>
@@ -487,7 +487,7 @@ const EvaluacionEmocionalPage = () => {
                   ¿Estás seguro de que deseas abandonar tu progreso con el profesional e iniciar una nueva evaluación?
                 </p>
               </div>
-              
+
               <div className="flex space-x-3">
                 <button
                   onClick={handleCancelNewEvaluation}
@@ -532,7 +532,7 @@ const EvaluacionEmocionalPage = () => {
                 </p>
               </div>
             </div>
-            
+
             <div className="space-y-4">
               <button
                 onClick={continueAfterSuicidalAlert}
@@ -544,7 +544,7 @@ const EvaluacionEmocionalPage = () => {
                 onClick={goToDashboard}
                 className="w-full bg-gray-300 text-gray-700 py-3 px-6 rounded-lg font-medium hover:bg-gray-400 transition-colors"
               >
-                Ir al Dashboard
+                Ir a mi Panel principal
               </button>
             </div>
           </div>
@@ -555,15 +555,15 @@ const EvaluacionEmocionalPage = () => {
 
   if (currentStep === 'categorization') {
     console.log('🎯 Renderizando preguntas de categorización...');
-    console.log('📊 Estado actual:', { 
-      currentStep, 
+    console.log('📊 Estado actual:', {
+      currentStep,
       allCategorizationQuestionsLength: allCategorizationQuestions.length,
       currentQuestionIndex,
       availableTestsLength: availableTests.length
     });
-    
+
     const currentQuestion = allCategorizationQuestions[currentQuestionIndex];
-    
+
     if (!currentQuestion) {
       console.log('⚠️ No hay pregunta actual, redirigiendo al test...');
       // Si no hay preguntas de categorización, ir directamente al test
@@ -590,14 +590,14 @@ const EvaluacionEmocionalPage = () => {
                   </svg>
                 </button>
               </div>
-              
+
               <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
                 <span>Pregunta {currentQuestionIndex + 1} de {allCategorizationQuestions.length}</span>
                 <span>Preguntas de categorización</span>
               </div>
-              
+
               <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
+                <div
                   className="bg-primary-600 h-2 rounded-full transition-all duration-300"
                   style={{ width: `${((currentQuestionIndex + 1) / allCategorizationQuestions.length) * 100}%` }}
                 ></div>
@@ -609,7 +609,7 @@ const EvaluacionEmocionalPage = () => {
               <h2 className="text-xl font-medium text-gray-900 mb-6">
                 {currentQuestion.text}
               </h2>
-              
+
               <div className="space-y-3">
                 {currentQuestion.options.map((option) => (
                   <label key={option.id} className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
@@ -667,14 +667,14 @@ const EvaluacionEmocionalPage = () => {
                   </svg>
                 </button>
               </div>
-              
+
               <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
                 <span>Pregunta {currentQuestionIndex + 1} de {selectedTest.questions.length}</span>
                 <span>Tiempo estimado: {selectedTest.estimatedTime} min</span>
               </div>
-              
+
               <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
+                <div
                   className="bg-primary-600 h-2 rounded-full transition-all duration-300"
                   style={{ width: `${((currentQuestionIndex + 1) / selectedTest.questions.length) * 100}%` }}
                 ></div>
@@ -701,7 +701,7 @@ const EvaluacionEmocionalPage = () => {
                 {currentQuestion.text}
                 {currentQuestion.required && <span className="text-red-500 ml-1">*</span>}
               </h2>
-              
+
               <div className="space-y-3">
                 {currentQuestion.options.map((option) => (
                   <label key={option.id} className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
@@ -728,7 +728,7 @@ const EvaluacionEmocionalPage = () => {
               >
                 Anterior
               </button>
-              
+
               <button
                 onClick={nextTestQuestion}
                 disabled={currentQuestion.required && !testAnswers[currentQuestion.id] || loading}
@@ -775,12 +775,12 @@ const EvaluacionEmocionalPage = () => {
               </p>
               {/* Los resultados de la evaluación son privados y solo los verá el profesional */}
             </div>
-            
+
             <button
               onClick={goToDashboard}
               className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 transition-colors"
             >
-              Ir a mi Dashboard
+              Ir a mi Panel principal
             </button>
           </div>
         </div>
@@ -823,7 +823,7 @@ const EvaluacionEmocionalPage = () => {
               <p className="text-lg text-gray-600 mb-6">
                 Hemos encontrado un profesional especializado para ti.
               </p>
-              
+
               {/* Información del profesional asignado */}
               {assignedProfessional && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6 text-left tinder-card">
@@ -833,78 +833,78 @@ const EvaluacionEmocionalPage = () => {
                     </svg>
                     Tu Profesional Asignado
                   </h3>
-                  
+
                   <div className="space-y-3">
                     <div className="flex items-center">
                       <span className="font-medium text-gray-700 w-24">Nombre:</span>
                       <span className="text-gray-900">{assignedProfessional.name}</span>
                     </div>
-                    
-                    
+
+
                     {assignedProfessional.contact?.email && (
                       <div className="flex items-center">
                         <span className="font-medium text-gray-700 w-24">Email:</span>
                         <span className="text-gray-900">{assignedProfessional.contact.email}</span>
                       </div>
                     )}
-                    
+
                     {assignedProfessional.contact?.phone && (
                       <div className="flex items-center">
                         <span className="font-medium text-gray-700 w-24">Teléfono:</span>
                         <span className="text-gray-900">{assignedProfessional.contact.phone}</span>
                       </div>
                     )}
-                    
+
                     {/* Enlaces de redes sociales */}
-                    {(assignedProfessional.contact?.whatsapp || 
-                      assignedProfessional.contact?.instagram || 
+                    {(assignedProfessional.contact?.whatsapp ||
+                      assignedProfessional.contact?.instagram ||
                       assignedProfessional.contact?.linkedin) && (
-                      <div className="flex flex-col">
-                        <span className="font-medium text-gray-700 mb-2">Redes Sociales:</span>
-                        <div className="flex flex-wrap gap-2">
-                          {assignedProfessional.contact?.whatsapp && (
-                            <a
-                              href={`https://wa.me/${assignedProfessional.contact.whatsapp.replace(/\D/g, '')}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center bg-green-500 text-white text-xs px-3 py-2 rounded-lg hover:bg-green-600 transition-colors"
-                            >
-                              <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.488"/>
-                              </svg>
-                              WhatsApp
-                            </a>
-                          )}
-                          {assignedProfessional.contact?.instagram && (
-                            <a
-                              href={`https://instagram.com/${assignedProfessional.contact.instagram.replace('@', '')}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center bg-pink-500 text-white text-xs px-3 py-2 rounded-lg hover:bg-pink-600 transition-colors"
-                            >
-                              <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-                              </svg>
-                              Instagram
-                            </a>
-                          )}
-                          {assignedProfessional.contact?.linkedin && (
-                            <a
-                              href={`https://linkedin.com/in/${assignedProfessional.contact.linkedin.replace(/^.*linkedin\.com\/in\//, '').replace(/\/$/, '')}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center bg-blue-600 text-white text-xs px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                            >
-                              <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-                              </svg>
-                              LinkedIn
-                            </a>
-                          )}
+                        <div className="flex flex-col">
+                          <span className="font-medium text-gray-700 mb-2">Redes Sociales:</span>
+                          <div className="flex flex-wrap gap-2">
+                            {assignedProfessional.contact?.whatsapp && (
+                              <a
+                                href={`https://wa.me/${assignedProfessional.contact.whatsapp.replace(/\D/g, '')}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center bg-green-500 text-white text-xs px-3 py-2 rounded-lg hover:bg-green-600 transition-colors"
+                              >
+                                <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.488" />
+                                </svg>
+                                WhatsApp
+                              </a>
+                            )}
+                            {assignedProfessional.contact?.instagram && (
+                              <a
+                                href={`https://instagram.com/${assignedProfessional.contact.instagram.replace('@', '')}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center bg-pink-500 text-white text-xs px-3 py-2 rounded-lg hover:bg-pink-600 transition-colors"
+                              >
+                                <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
+                                </svg>
+                                Instagram
+                              </a>
+                            )}
+                            {assignedProfessional.contact?.linkedin && (
+                              <a
+                                href={`https://linkedin.com/in/${assignedProfessional.contact.linkedin.replace(/^.*linkedin\.com\/in\//, '').replace(/\/$/, '')}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center bg-blue-600 text-white text-xs px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                              >
+                                <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+                                </svg>
+                                LinkedIn
+                              </a>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    )}
-                    
+                      )}
+
                     {assignedProfessional.specialities && assignedProfessional.specialities.length > 0 && (
                       <div className="flex flex-col">
                         <span className="font-medium text-gray-700 mb-2">Especialidades:</span>
@@ -917,14 +917,14 @@ const EvaluacionEmocionalPage = () => {
                         </div>
                       </div>
                     )}
-                    
+
                     {assignedProfessional.exprecienceYears && (
                       <div className="flex items-center">
                         <span className="font-medium text-gray-700 w-24">Experiencia:</span>
                         <span className="text-gray-900">{assignedProfessional.exprecienceYears} años</span>
                       </div>
                     )}
-                    
+
                     {assignedProfessional.rating > 0 && (
                       <div className="flex items-center">
                         <span className="font-medium text-gray-700 w-24">Calificación:</span>
@@ -935,7 +935,7 @@ const EvaluacionEmocionalPage = () => {
                         </div>
                       </div>
                     )}
-                    
+
                     {assignedProfessional.modalities && (
                       <div className="flex flex-col">
                         <span className="font-medium text-gray-700 mb-2">Modalidades:</span>
@@ -956,12 +956,12 @@ const EvaluacionEmocionalPage = () => {
                 </div>
               )}
             </div>
-            
+
             <button
               onClick={goToDashboard}
               className="w-full bg-green-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-green-700 transition-colors"
             >
-              Ir a mi Dashboard
+              Ir a mi Panel principal
             </button>
           </div>
         </div>
@@ -988,7 +988,7 @@ const EvaluacionEmocionalPage = () => {
                 ¿Estás seguro de que deseas abandonar tu progreso con el profesional e iniciar una nueva evaluación?
               </p>
             </div>
-            
+
             <div className="flex space-x-3">
               <button
                 onClick={handleCancelNewEvaluation}
