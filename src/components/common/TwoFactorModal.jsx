@@ -29,9 +29,12 @@ const TwoFactorModal = ({ isOpen, uid, email, onVerified, onCancel }) => {
 
   const inputRefs = useRef([]);
 
+  const hasRequested = useRef(false);
+
   // Auto-send code when modal opens
   useEffect(() => {
-    if (isOpen && uid && email && !codeSent) {
+    if (isOpen && uid && email && !hasRequested.current) {
+      hasRequested.current = true;
       sendCode();
     }
   }, [isOpen, uid, email]);

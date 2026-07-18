@@ -281,7 +281,7 @@ exports.generate2FACode = onCall(async (request) => {
 
   // Rate limiting: no permitir nuevo código si el anterior tiene menos de 60s
   const existing = await otpRef.get();
-  if (existing.exists()) {
+  if (existing.exists) {
     const data = existing.data();
     const createdAt = data.createdAt?.toDate?.() || new Date(0);
     const secondsSince = (Date.now() - createdAt.getTime()) / 1000;
@@ -355,7 +355,7 @@ exports.verify2FACode = onCall(async (request) => {
   const otpRef = db.collection("otpCodes").doc(uid);
   const otpDoc = await otpRef.get();
 
-  if (!otpDoc.exists()) {
+  if (!otpDoc.exists) {
     throw new HttpsError("not-found", "Código expirado o no encontrado. Solicitá uno nuevo.");
   }
 

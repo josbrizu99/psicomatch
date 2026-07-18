@@ -426,6 +426,10 @@ export const processGoogleUser = async (user) => {
 // Cerrar sesión
 export const logoutUser = async () => {
   try {
+    const uid = auth.currentUser?.uid;
+    if (uid) {
+      sessionStorage.removeItem(`2fa_verified_${uid}`);
+    }
     await signOut(auth);
     return { success: true };
   } catch (error) {

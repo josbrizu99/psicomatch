@@ -113,55 +113,29 @@ export const getUserSessions = async (userId) => {
     
     const sessionsRef = collection(db, 'userSessions');
     
-    // Intentar con orderBy primero
-    try {
-      const q = query(
-        sessionsRef,
-        where('userId', '==', userId),
-        orderBy('createdAt', 'desc')
-      );
-      
-      const querySnapshot = await getDocs(q);
-      
-      const sessions = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          ...data,
-          id: doc.id // ID del documento de Firestore (tiene prioridad sobre el campo id dentro del documento)
-        };
-      });
-      
-      console.log('✅ Sesiones obtenidas:', sessions.length);
-      return { success: true, sessions };
-    } catch (orderError) {
-      // Si falla por falta de índice, intentar sin orderBy
-      if (orderError.code === 'failed-precondition' || orderError.message?.includes('index')) {
-        console.warn('⚠️ Índice no encontrado, obteniendo sin ordenar...');
-        const q = query(
-          sessionsRef,
-          where('userId', '==', userId)
-        );
-        
-        const querySnapshot = await getDocs(q);
-        
-        const sessions = querySnapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            ...data,
-            id: doc.id // ID del documento de Firestore (tiene prioridad sobre el campo id dentro del documento)
-          };
-        }).sort((a, b) => {
-          // Ordenar en el cliente
-          const aDate = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt || 0);
-          const bDate = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt || 0);
-          return bDate - aDate;
-        });
-        
-        console.log('✅ Sesiones obtenidas (sin índice):', sessions.length);
-        return { success: true, sessions };
-      }
-      throw orderError;
-    }
+    // Obtenemos las sesiones sin ordenar en Firestore porque requiere un índice compuesto
+    const q = query(
+      sessionsRef,
+      where('userId', '==', userId)
+    );
+    
+    const querySnapshot = await getDocs(q);
+    
+    const sessions = querySnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        ...data,
+        id: doc.id
+      };
+    }).sort((a, b) => {
+      // Ordenar en el cliente
+      const aDate = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt || 0);
+      const bDate = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt || 0);
+      return bDate - aDate;
+    });
+    
+    console.log('✅ Sesiones obtenidas:', sessions.length);
+    return { success: true, sessions };
     
   } catch (error) {
     console.error('❌ Error al obtener sesiones:', error);

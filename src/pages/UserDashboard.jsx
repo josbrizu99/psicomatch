@@ -1311,6 +1311,8 @@ const UserDashboard = () => {
           </div>
         )}
 
+
+
         {sessions.length === 0 && assignedProfessional && (
           <div className="bg-white rounded-xl shadow-lg p-8 mt-8">
             <h3 className="text-xl font-bold text-gray-900 mb-4">Historial de Sesiones</h3>

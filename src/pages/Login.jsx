@@ -16,6 +16,7 @@ const Login = () => {
   const [error, setError] = useState('');
   const [show2FA, setShow2FA] = useState(false);
   const [pendingUser, setPendingUser] = useState(null);
+  const [loginInProgress, setLoginInProgress] = useState(false);
   const navigate = useNavigate();
   const { isUserAdmin, currentUser, userData, loading: authLoading } = useAuth();
 
@@ -36,21 +37,35 @@ const Login = () => {
 
   // Redirigir automáticamente si ya está autenticado (y 2FA resuelto)
   useEffect(() => {
-    if (currentUser && !authLoading && !loading && !show2FA) {
-      if (isUserAdmin) {
-        navigate('/admin');
-      } else {
-        const isNewUser = userData?.loginCount === 1;
-        const hasCompletedTests = userData?.testsCompleted > 0;
-        const hasTestProgress = userData?.testProgress && userData.testProgress !== 'null';
-        if (isNewUser && !hasCompletedTests && !hasTestProgress) {
-          navigate('/evaluacion-emocional');
-        } else {
-          navigate('/dashboard');
+    if (currentUser && !authLoading && !loading && !show2FA && !loginInProgress) {
+      const check2FA = async () => {
+        const twoFAEnabled = userData?.twoFactorEnabled || await is2FAEnabled(currentUser.uid);
+        const isVerified = sessionStorage.getItem(`2fa_verified_${currentUser.uid}`) === 'true';
+
+        if (twoFAEnabled && !isVerified) {
+          setPendingUser(currentUser);
+          setShow2FA(true);
+          return;
         }
-      }
+
+        // Si no requiere 2FA o ya lo verificó, procedemos a redirigir
+        if (isUserAdmin) {
+          navigate('/admin');
+        } else {
+          const isNewUser = userData?.loginCount === 1;
+          const hasCompletedTests = userData?.testsCompleted > 0;
+          const hasTestProgress = userData?.testProgress && userData.testProgress !== 'null';
+          if (isNewUser && !hasCompletedTests && !hasTestProgress) {
+            navigate('/evaluacion-emocional');
+          } else {
+            navigate('/dashboard');
+          }
+        }
+      };
+      
+      check2FA();
     }
-  }, [currentUser, isUserAdmin, loading, authLoading, navigate, userData, show2FA]);
+  }, [currentUser, isUserAdmin, loading, authLoading, navigate, userData, show2FA, loginInProgress]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -60,6 +75,7 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setLoginInProgress(true);
     setError('');
 
     try {
@@ -81,14 +97,19 @@ const Login = () => {
         if (twoFAEnabled) {
           setPendingUser(result.user);
           setShow2FA(true);
+          // NO seteamos loginInProgress a false aquí, para que no redirija
+        } else {
+          // Si no tiene 2FA, puede redirigir
+          setLoginInProgress(false);
         }
-        // Si no tiene 2FA, el useEffect manejará la redirección automáticamente
       } else {
         setError(result.error);
+        setLoginInProgress(false);
       }
     } catch (error) {
       setError('Error inesperado. Intenta de nuevo.');
       console.error('Error en login:', error);
+      setLoginInProgress(false);
     } finally {
       setLoading(false);
     }
@@ -96,6 +117,7 @@ const Login = () => {
 
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
+    setLoginInProgress(true);
     setError('');
     try {
       // Nota: Con Google es más difícil verificar ANTES del login porque no sabemos el email
@@ -106,6 +128,7 @@ const Login = () => {
       if (!result.success) {
         setError(result.error);
         setGoogleLoading(false);
+        setLoginInProgress(false);
         return;
       }
 
@@ -120,10 +143,22 @@ const Login = () => {
           await logoutUser();
           setError('Te registraste como profesional. Para acceder a tu cuenta ve al Acceso de Profesionales. Si deseas ingresar como usuario consultante, debes registrarte con otro correo.');
           setGoogleLoading(false);
+          setLoginInProgress(false);
           return;
         }
+
+        // Verificar 2FA para usuario Google
+        const twoFAEnabled = await is2FAEnabled(result.user.uid);
+        if (twoFAEnabled) {
+          setPendingUser(result.user);
+          setShow2FA(true);
+          // Mantenemos loginInProgress true
+        } else {
+          setLoginInProgress(false); // Puede redirigir
+        }
+      } else {
+        setLoginInProgress(false);
       }
-      // Si success, verificar 2FA se manejará por el useEffect + estado
     } catch (error) {
       setError('Error inesperado al iniciar sesión con Google.');
       console.error('Error en login con Google:', error);
@@ -133,14 +168,18 @@ const Login = () => {
   };
 
   const handle2FAVerified = () => {
+    if (pendingUser) {
+      sessionStorage.setItem(`2fa_verified_${pendingUser.uid}`, 'true');
+    }
     setShow2FA(false);
     setPendingUser(null);
-    // El useEffect de currentUser redirigirá
+    setLoginInProgress(false); // Liberar redirección
   };
 
   const handle2FACancel = async () => {
     setShow2FA(false);
     setPendingUser(null);
+    setLoginInProgress(false);
     await logoutUser();
   };
 

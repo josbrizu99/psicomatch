@@ -38,6 +38,7 @@ const UserDashboard = lazy(() => import('./pages/UserDashboard'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const ProfessionalDashboard = lazy(() => import('./pages/ProfessionalDashboard'));
 const EvaluacionEmocionalPage = lazy(() => import('./pages/EvaluacionEmocionalPage'));
+const UserSettings = lazy(() => import('./pages/UserSettings'));
 
 function AppContent() {
   const location = useLocation();
@@ -191,14 +192,16 @@ function AppContent() {
                   </ProtectedRoute>
                 } 
               />
-              <Route 
-                path="/evaluacion-emocional" 
-                element={
-                  <ProtectedRoute requireAuth={true}>
+              <Route path="/evaluacion-emocional" element={
+                  <ProtectedRoute requireUser={true}>
                     <EvaluacionEmocionalPage />
                   </ProtectedRoute>
-                } 
-              />
+                } />
+                <Route path="/configuracion" element={
+                  <ProtectedRoute requireUser={true}>
+                    <UserSettings />
+                  </ProtectedRoute>
+                } />
               <Route 
                 path="/test-evaluacion" 
                 element={
