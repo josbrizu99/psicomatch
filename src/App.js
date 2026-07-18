@@ -113,15 +113,13 @@ function AppContent() {
     allConditions: needsCompletion && !loading && !profileCompleted && !isActuallyProfessional
   });
 
-  if (needsCompletion && !loading && !profileCompleted && !isActuallyProfessional) {
-    logger.log('✅ Mostrando ProfileWizard para usuario regular');
+  const isRegistrationRoute = location.pathname === '/professional-registration' || location.pathname === '/registro-profesional';
+
+  if (needsCompletion && !loading && !profileCompleted && !isRegistrationRoute) {
+    logger.log(`✅ Mostrando ProfileWizard para ${isActuallyProfessional ? 'profesional' : 'usuario regular'}`);
     return (
       <ProfileWizard onComplete={() => setProfileCompleted(true)} />
     );
-  }
-
-  if (needsCompletion && !loading && !profileCompleted && isActuallyProfessional) {
-    logger.log('❌ NO mostrando ProfileWizard para profesional (verificación directa)');
   }
 
   if (!needsCompletion) {

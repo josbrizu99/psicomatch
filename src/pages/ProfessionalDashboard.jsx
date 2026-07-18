@@ -32,6 +32,7 @@ const ProfessionalDashboard = () => {
   const [sessions, setSessions] = useState([]);
   const [sessionLoading, setSessionLoading] = useState(true);
   const [closingSessionId, setClosingSessionId] = useState(null);
+  // eslint-disable-next-line no-unused-vars
   const [progressUpdating, setProgressUpdating] = useState(false);
   const [endReasons, setEndReasons] = useState({});
   const [patients, setPatients] = useState([]);
@@ -1281,6 +1282,7 @@ const ProfessionalDashboard = () => {
                       professionalNotifications.map((notification) => {
                         const session = notification.session;
                         const patient = patientMap[session?.userId];
+                        // eslint-disable-next-line no-unused-vars
                         const patientName = patient?.name || patient?.email || 'Paciente';
 
                         return (
@@ -2108,7 +2110,7 @@ const ProfessionalDashboard = () => {
 
                   <textarea
                     rows={5}
-                    className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 mt-1 block w-full sm:text-sm border border-gray-300 rounded-md p-3"
+                    className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 mt-1 block w-full sm:text-sm border border-gray-300 rounded-md p-3 text-gray-900 bg-white placeholder-gray-400"
                     value={sessionNotes}
                     onChange={(e) => setSessionNotes(e.target.value)}
                     placeholder="Añade notas sobre el progreso del paciente, temas tratados, observaciones, etc. Estas serán visibles para el paciente en tiempo real."
@@ -2243,14 +2245,28 @@ const ProfessionalDashboard = () => {
                         (s.status === 'active' || s.status === 'in_progress')
                     );
 
+                    const formatCareStatus = (status) => {
+                      const statusMap = {
+                        'en_progreso': 'En progreso',
+                        'alta': 'Alta',
+                        'pendiente': 'Pendiente',
+                        'activo': 'Activo',
+                        'inactivo': 'Inactivo',
+                        'en espera': 'En espera',
+                        'nuevo': 'Nuevo',
+                        'en_seguimiento': 'En seguimiento',
+                      };
+                      return statusMap[status] || (status ? status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : '');
+                    };
+
                     return (
                       <div className={`border rounded-md p-3 ${activeSessions.length > 0 ? 'bg-yellow-50 border-yellow-200' : 'bg-blue-50 border-blue-200'}`}>
-                        <p className="text-xs font-medium mb-1">
+                        <p className="text-xs font-medium mb-1 text-gray-800">
                           <strong>Paciente seleccionado:</strong> {selectedPatient?.name || selectedPatient?.email}
                         </p>
                         {selectedPatient?.careStatus && (
-                          <p className="text-xs mb-1">
-                            Estado de atención: <span className="font-semibold">{selectedPatient.careStatus}</span>
+                          <p className="text-xs mb-1 text-gray-700">
+                            Estado de atención: <span className="font-semibold">{formatCareStatus(selectedPatient.careStatus)}</span>
                           </p>
                         )}
                         {activeSessions.length > 0 ? (

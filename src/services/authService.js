@@ -9,9 +9,45 @@ import {
   getRedirectResult,
   updateProfile
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc, serverTimestamp, addDoc, collection } from 'firebase/firestore';
 import { auth, db } from '../firebase/firebase';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { translateAuthError } from '../utils/errorTranslator';
+
+const functions = getFunctions();
+
+// Enviar notificación de login por email (silenciosamente, no bloquea el flujo)
+const notifyLogin = async (user, name) => {
+  try {
+    const sendLoginNotification = httpsCallable(functions, 'sendLoginNotification');
+    await sendLoginNotification({
+      email: user.email,
+      name: name || user.displayName || 'usuario',
+      loginTime: new Date().toISOString(),
+    });
+  } catch (err) {
+    // No bloquear el login si falla el email
+    console.warn('⚠️ No se pudo enviar notificación de login:', err.message);
+  }
+};
+
+// Registrar acción del usuario (capturar IP)
+export const logUserAction = async (userId, actionType) => {
+  try {
+    const response = await fetch('https://api.ipify.org?format=json');
+    const data = await response.json();
+    const ipaddress = data.ip || 'desconocida';
+    
+    await addDoc(collection(db, 'userLogs'), {
+      ipaddress: ipaddress,
+      lastAction: actionType, // 'register' o 'session'
+      lastLoginAt: serverTimestamp(),
+      userId: userId
+    });
+  } catch (error) {
+    console.error('Error logging user action:', error);
+  }
+};
 
 // Proveedor de Google
 const googleProvider = new GoogleAuthProvider();
@@ -72,6 +108,8 @@ export const registerUser = async (name, email, password) => {
     console.log('📝 Guardando datos en Firestore:', userData);
     await setDoc(doc(db, 'users', user.uid), userData);
     
+    await logUserAction(user.uid, 'register');
+    
     console.log('✅ Usuario registrado exitosamente');
     console.log('🔍 Verificando datos guardados...');
     
@@ -100,6 +138,8 @@ export const loginUser = async (email, password) => {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const uid = userCredential.user.uid;
+    
+    await logUserAction(uid, 'session');
     
     // Actualizar datos de login
     try {
@@ -170,6 +210,10 @@ export const loginUser = async (email, password) => {
       
       // Pequeño delay para asegurar que la actualización se complete
       await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Enviar notificación de login por email (async, no bloquea)
+      const displayName = userDoc.exists() ? userDoc.data()?.name : null;
+      notifyLogin(userCredential.user, displayName);
     } catch (updateError) {
       console.error('❌ Error al actualizar datos de login:', updateError);
     }
@@ -339,6 +383,7 @@ export const processGoogleUser = async (user) => {
       };
       
       await setDoc(doc(db, 'users', user.uid), userData);
+      await logUserAction(user.uid, 'register');
       console.log('✅ Nuevo usuario Google creado en Firestore');
     } else {
       console.log('🔄 Usuario existente, actualizando datos...');
@@ -361,10 +406,14 @@ export const processGoogleUser = async (user) => {
       }
       
       await updateDoc(doc(db, 'users', user.uid), updateData);
-      console.log('✅ Contador de inicios de sesión incrementado (Google):', currentLoginCount + 1);
+      await logUserAction(user.uid, 'session');
+      console.log('✅ Datos de usuario de Google actualizados');
       
       // Pequeño delay para asegurar que la actualización se complete
       await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Enviar notificación de login
+      notifyLogin(user, userDoc.data()?.name || user.displayName);
     }
     
     return { success: true };

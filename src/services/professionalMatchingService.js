@@ -11,6 +11,10 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase/firebase';
 import { serverTimestamp } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+
+const functions = getFunctions();
+
 
 // Función para normalizar especialidades
 const normalizeSpecialties = (specialties) => {
@@ -58,15 +62,29 @@ const calculateCompatibilityScore = (professional, testSpecialties, userResults,
     score += 10;
   }
   
-  // 3. Disponibilidad (15% del peso)
-  if (professional.availability?.isAvailable === true) {
-    score += 15;
+  // 3. Disponibilidad (20% del peso) - Mayor peso para profesionales realmente disponibles
+  if (professional.availability?.isAvailable === true && professional.status === 'active') {
+    score += 20;
+  } else if (professional.availability?.isAvailable === true) {
+    score += 12;
   } else {
     score += 0;
   }
   
-  // 4. Experiencia (10% del peso)
-  const experienceYears = parseInt(professional.exprecienceYears) || 0;
+  // 4. Carga de trabajo (10% del peso) - Preferir profesionales con menos usuarios asignados
+  const currentAssignments = professional.currentAssignments || 0;
+  if (currentAssignments === 0) {
+    score += 10;
+  } else if (currentAssignments <= 5) {
+    score += 7;
+  } else if (currentAssignments <= 10) {
+    score += 3;
+  } else if (currentAssignments > 15) {
+    score -= 5; // Penalizar si está sobrecargado
+  }
+  
+  // 5. Experiencia (10% del peso)
+  const experienceYears = parseInt(professional.exprecienceYears || professional.experienceYears) || 0;
   if (experienceYears >= 5) {
     score += 10;
   } else if (experienceYears >= 3) {
@@ -77,28 +95,17 @@ const calculateCompatibilityScore = (professional, testSpecialties, userResults,
     score += 1;
   }
   
-  // 5. Modalidades de atención (5% del peso)
+  // 6. Modalidades de atención (5% del peso)
   const modalities = professional.modalities || {};
   if (modalities.online || modalities.inPerson || modalities.hybrid) {
     score += 5;
   }
   
-  // 6. Diversidad de asignaciones (10% del peso) - Evitar siempre el mismo profesional
-  const professionalId = professional.id;
-  const diversityBonus = Math.random() * 10; // Bonus aleatorio para diversidad
+  // 7. Diversidad de asignaciones - Bonus aleatorio más pequeño para no distorsionar el score
+  const diversityBonus = Math.random() * 5;
   score += diversityBonus;
   
-  // 7. Carga de trabajo (5% del peso) - Preferir profesionales con menos usuarios asignados
-  const currentAssignments = professional.currentAssignments || 0;
-  if (currentAssignments === 0) {
-    score += 5;
-  } else if (currentAssignments <= 5) {
-    score += 3;
-  } else if (currentAssignments <= 10) {
-    score += 1;
-  }
-  
-  return Math.min(score, 100); // Máximo 100 puntos
+  return Math.min(score, 100);
 };
 
 // Buscar profesional disponible para un usuario
@@ -219,6 +226,34 @@ export const findMatchingProfessional = async (userId, testSpecialties, userResu
     });
     
     console.log('✅ Profesional asignado:', selectedProfessional.name, 'Puntuación:', selectedProfessional.compatibilityScore.toFixed(2));
+
+    // Obtener datos del usuario para el email
+    try {
+      const userDoc = await getDoc(doc(db, 'users', userId));
+      const userData = userDoc.data();
+
+      // Notificar al usuario
+      const sendMatchUser = httpsCallable(functions, 'sendMatchNotificationUser');
+      sendMatchUser({
+        userEmail: userData?.email,
+        userName: userData?.name || 'usuario',
+        professionalName: selectedProfessional.fullName || selectedProfessional.name,
+        professionalSpecialty: (selectedProfessional.specialities || [])[0] || 'Psicología General',
+        compatibilityScore: selectedProfessional.compatibilityScore,
+      }).catch((e) => console.warn('⚠️ Email match usuario fallido:', e.message));
+
+      // Notificar al profesional
+      const sendMatchProfessional = httpsCallable(functions, 'sendMatchNotificationProfessional');
+      sendMatchProfessional({
+        professionalEmail: selectedProfessional.email || selectedProfessional.contact?.email,
+        professionalName: selectedProfessional.fullName || selectedProfessional.name,
+        userName: userData?.name || 'usuario',
+        userSpecialtyNeeds: userResults?.recommendedSpecialties || [],
+      }).catch((e) => console.warn('⚠️ Email match profesional fallido:', e.message));
+    } catch (emailErr) {
+      console.warn('⚠️ Error al enviar emails de match:', emailErr.message);
+    }
+
     return { 
       success: true, 
       professional: selectedProfessional,

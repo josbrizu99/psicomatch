@@ -24,46 +24,42 @@ const FeaturedProfessionals = () => {
 
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
-                    console.log("📄 Raw Doc:", data); // Debug log
 
-                    // Filtrado en cliente
-                    if (data.isVerified === true) {
+                    // Filtrado en cliente: mostrar verificados Y aprobados
+                    if (data.isVerified === true || data.isApproved === true) {
+                        const allSpecialties = data.specialities || data.specialties || [];
+                        const specialtyStr = Array.isArray(allSpecialties) && allSpecialties.length > 0
+                            ? allSpecialties[0]
+                            : typeof allSpecialties === 'string' ? allSpecialties : 'Psicología General';
+
+                        const exp = parseInt(data.exprecienceYears || data.yearsOfExperience || data.experienceYears) || 0;
+
                         prosData.push({
                             id: doc.id,
                             name: data.fullName || data.displayName || data.name || 'Profesional',
-                            // Mapeo robusto intentando todas las variantes posibles
-                            specialty: (data.specialities && data.specialities[0]) ||
-                                (data.specialties && data.specialties[0]) ||
-                                'Psicología General',
-
-                            experience: data.exprecienceYears ? `${data.exprecienceYears} años` :
-                                (data.yearsOfExperience ? `${data.yearsOfExperience} años` : 'N/A'),
-
-                            rating: typeof data.rating === 'number' ? data.rating : 0,
+                            specialty: specialtyStr,
+                            experience: exp > 0 ? `${exp} año${exp !== 1 ? 's' : ''}` : 'N/A',
+                            rating: typeof data.rating === 'number' ? data.rating :
+                                    typeof data.averageRating === 'number' ? data.averageRating : 0,
                             reviewCount: data.ratingCount || data.reviewCount || 0,
-                            price: data.hourlyRate ? `$${data.hourlyRate}` : 'Consultar',
-                            avatar: data.photoURL || (data.fullName ? data.fullName.charAt(0) : 'P'),
-                            photoURL: data.photoURL,
-                            color: 'bg-blue-500',
-                            verified: data.isVerified,
-                            online: data.availability?.isAvailable || false
+                            price: data.hourlyRate ? `$${data.hourlyRate}` :
+                                   data.sessionPrice ? `$${data.sessionPrice}` : 'Consultar',
+                            avatar: data.photoURL || (data.fullName ? data.fullName.charAt(0).toUpperCase() :
+                                    data.name ? data.name.charAt(0).toUpperCase() : 'P'),
+                            photoURL: data.photoURL || null,
+                            color: 'bg-primary-500',
+                            verified: data.isVerified || data.isApproved,
+                            online: data.availability?.isAvailable === true,
+                            modalities: data.modalities || {},
                         });
                     }
                 });
 
-                console.log("🎯 Filtered Pros:", prosData);
-
-                // Si no hay datos, usar mocks por defecto para que NO quede vacío mientras se depura
-                if (prosData.length === 0) {
-                    console.warn("⚠️ No verified professionals found. Showing Empty State.");
-                }
-
-                // Ordenar por rating descendente (en cliente)
+                // Ordenar por rating descendente
                 prosData.sort((a, b) => b.rating - a.rating);
 
                 // Limitar a 4 profesionales
                 const topProfessionals = prosData.slice(0, 4);
-
                 setProfessionals(topProfessionals);
             } catch (error) {
                 console.error("❌ Error fetching professionals:", error);

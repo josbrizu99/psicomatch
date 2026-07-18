@@ -7,197 +7,409 @@ const {onCall, HttpsError} = require("firebase-functions/v2/https");
 const {setGlobalOptions} = require("firebase-functions/v2");
 const admin = require("firebase-admin");
 const nodemailer = require("nodemailer");
+const crypto = require("crypto");
 
 // Configuración global para v2
-setGlobalOptions({maxInstances: 10});
+setGlobalOptions({maxInstances: 10, cors: true});
 
 admin.initializeApp();
 
-// Configurar transporter de email
+// ────────────────────────────────────────────────────────────
+// Email Transporter
+// ────────────────────────────────────────────────────────────
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD,
+    pass: process.env.EMAIL_PASSWORD, // App Password de Google
   },
 });
 
-/**
- * Enviar email de bienvenida cuando se registra un nuevo usuario
- */
-exports.sendWelcomeEmail = onDocumentCreated("users/{userId}", async (event) => {
-  const newUser = event.data.data();
-  const userId = event.params.userId;
+const FROM_ADDRESS = `PsicoMatch <${process.env.EMAIL_USER || "noreply@psicomatch.com"}>`;
+const APP_URL = process.env.APP_URL || "https://psicomatch2026.web.app";
 
-  // HTML del email
-  const mailOptions = {
-    from: "PsicoMatch <noreply@psicomatch.com>",
-    to: newUser.email,
-    subject: "¡Bienvenido a PsicoMatch!",
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h1 style="color: #6366f1;">¡Hola ${newUser.nombre}!</h1>
-        <p>Gracias por unirte a PsicoMatch, tu plataforma de salud mental de confianza.</p>
-        <p>Estamos aquí para ayudarte a encontrar el profesional perfecto para ti.</p>
-        <h2>Próximos pasos:</h2>
-        <ol>
-          <li>Completa tu perfil</li>
-          <li>Realiza la evaluación inicial</li>
-          <li>Explora profesionales recomendados</li>
-          <li>Agenda tu primera sesión</li>
-        </ol>
-        <a href="https://psicomatch.com/dashboard" 
-           style="background: #6366f1; color: white; padding: 12px 24px; 
-                  text-decoration: none; border-radius: 8px; display: inline-block; margin-top: 20px;">
-          Ir a mi Dashboard
-        </a>
-        <p style="color: #666; margin-top: 40px; font-size: 14px;">
-          Si tienes alguna pregunta, responde a este email.
-        </p>
-      </div>
-    `,
-  };
+// ────────────────────────────────────────────────────────────
+// Helpers de Email (Templates HTML Mejorados)
+// ────────────────────────────────────────────────────────────
+
+const baseTemplate = (content) => `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PsicoMatch</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f3f4f6;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+          <!-- Header -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#14b8a6,#6366f1);padding:32px 40px;text-align:center;">
+              <h1 style="margin:0;color:#ffffff;font-size:28px;font-weight:800;letter-spacing:-0.5px;">PsicoMatch</h1>
+              <p style="margin:4px 0 0;color:rgba(255,255,255,0.8);font-size:13px;">Tu salud mental, nuestra prioridad</p>
+            </td>
+          </tr>
+          <!-- Body -->
+          <tr>
+            <td style="padding:40px;">
+              ${content}
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="background:#f9fafb;padding:24px 40px;border-top:1px solid #e5e7eb;text-align:center;">
+              <p style="margin:0;color:#9ca3af;font-size:12px;">
+                © ${new Date().getFullYear()} PsicoMatch · Todos los derechos reservados<br/>
+                <a href="${APP_URL}" style="color:#14b8a6;text-decoration:none;">psicomatch.com</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+const ctaButton = (url, text) =>
+  `<a href="${url}" style="display:inline-block;background:linear-gradient(135deg,#14b8a6,#6366f1);color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:12px;font-size:15px;font-weight:600;margin-top:24px;">${text}</a>`;
+
+const infoBox = (content) =>
+  `<div style="background:#f0fdf9;border-left:4px solid #14b8a6;border-radius:8px;padding:16px 20px;margin:20px 0;">${content}</div>`;
+
+async function sendMail({to, subject, html}) {
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
+    console.warn("⚠️ EMAIL_USER o EMAIL_PASSWORD no configurados. Email simulado.");
+    console.log("Email simulado:", {to, subject});
+    return;
+  }
+  await transporter.sendMail({from: FROM_ADDRESS, to, subject, html});
+  // Log to Firestore
+  await admin.firestore().collection("emailLogs").add({
+    to, subject,
+    sentAt: admin.firestore.FieldValue.serverTimestamp(),
+    status: "sent",
+  });
+}
+
+// ────────────────────────────────────────────────────────────
+// Trigger: Email de Bienvenida (al crear usuario)
+// ────────────────────────────────────────────────────────────
+exports.sendWelcomeEmail = onDocumentCreated("users/{userId}", async (event) => {
+  const user = event.data.data();
+  if (!user?.email) return null;
+
+  const html = baseTemplate(`
+    <h2 style="color:#111827;font-size:22px;font-weight:700;margin-bottom:8px;">¡Hola, ${user.name || "bienvenido"}! 👋</h2>
+    <p style="color:#4b5563;font-size:15px;line-height:1.6;">Gracias por unirte a <strong>PsicoMatch</strong>. Estamos aquí para ayudarte a encontrar el profesional de salud mental perfecto para vos.</p>
+    ${infoBox(`
+      <p style="margin:0;font-weight:600;color:#0f766e;margin-bottom:8px;">Próximos pasos:</p>
+      <ol style="margin:0;padding-left:20px;color:#4b5563;font-size:14px;line-height:2;">
+        <li>Completá tu perfil</li>
+        <li>Realizá la evaluación emocional inicial</li>
+        <li>Dejá que nuestro algoritmo te encuentre el mejor profesional</li>
+        <li>Agendá tu primera sesión</li>
+      </ol>
+    `)}
+    <div style="text-align:center;">
+      ${ctaButton(`${APP_URL}/dashboard`, "Ir a mi Dashboard")}
+    </div>
+    <p style="color:#9ca3af;font-size:13px;margin-top:32px;">Si no creaste esta cuenta, ignorá este email o contactanos.</p>
+  `);
 
   try {
-    await transporter.sendMail(mailOptions);
-    console.log(`✅ Email de bienvenida enviado a ${newUser.email}`);
-
-    // Registrar en Firestore
-    await admin.firestore().collection("emailLogs").add({
-      type: "welcome",
-      userId,
-      email: newUser.email,
-      sentAt: admin.firestore.FieldValue.serverTimestamp(),
-      status: "sent",
+    await sendMail({
+      to: user.email,
+      subject: "¡Bienvenido a PsicoMatch! 🌿",
+      html,
     });
-
-    return null;
-  } catch (error) {
-    console.error("❌ Error enviando email:", error);
-
-    // Registrar error
-    await admin.firestore().collection("emailLogs").add({
-      type: "welcome",
-      userId,
-      email: newUser.email,
-      sentAt: admin.firestore.FieldValue.serverTimestamp(),
-      status: "error",
-      error: error.message,
-    });
-
-    throw error;
+    console.log(`✅ Email de bienvenida enviado a ${user.email}`);
+  } catch (err) {
+    console.error("❌ Error enviando email de bienvenida:", err);
   }
-});
-
-/**
- * Enviar recordatorios de sesiones próximas
- * Se ejecuta cada hora
- */
-exports.sendSessionReminders = onSchedule("every 1 hours", async (event) => {
-  const db = admin.firestore();
-  const now = admin.firestore.Timestamp.now();
-
-  // Calcular 24 horas desde ahora
-  const tomorrow = new Date(now.toDate());
-  tomorrow.setHours(tomorrow.getHours() + 24);
-
-  // Buscar sesiones en próximas 24 horas que no han sido recordadas
-  const sessionsSnapshot = await db.collection("sessions")
-    .where("scheduledAt", ">", now)
-    .where("scheduledAt", "<", admin.firestore.Timestamp.fromDate(tomorrow))
-    .where("status", "==", "scheduled")
-    .where("reminderSent", "==", false)
-    .get();
-
-  const promises = [];
-
-  sessionsSnapshot.forEach((doc) => {
-    const session = doc.data();
-
-    // Enviar email al usuario
-    promises.push(
-      sendSessionReminderEmail(session.userId, session, "user")
-    );
-
-    // Enviar email al profesional
-    promises.push(
-      sendSessionReminderEmail(session.professionalId, session, "professional")
-    );
-
-    // Marcar como recordado
-    promises.push(
-      doc.ref.update({reminderSent: true})
-    );
-  });
-
-  await Promise.all(promises);
-  console.log(`✅ Recordatorios enviados para ${sessionsSnapshot.size} sesiones`);
-
   return null;
 });
 
-/**
- * Helper para enviar emails de recordatorio
- * @param {string} recipientId ID del destinatario
- * @param {object} session Datos de la sesión
- * @param {string} recipientType 'user' o 'professional'
- */
-async function sendSessionReminderEmail(recipientId, session, recipientType) {
+// ────────────────────────────────────────────────────────────
+// Callable: Enviar notificación de login
+// ────────────────────────────────────────────────────────────
+exports.sendLoginNotification = onCall({ cors: true }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Debes estar autenticado");
+
+  const {email, name, loginTime} = request.data;
+  const formattedTime = loginTime
+    ? new Date(loginTime).toLocaleString("es-PY", {timeZone: "America/Asuncion"})
+    : new Date().toLocaleString("es-PY", {timeZone: "America/Asuncion"});
+
+  const html = baseTemplate(`
+    <h2 style="color:#111827;font-size:22px;font-weight:700;margin-bottom:8px;">Nuevo inicio de sesión 🔐</h2>
+    <p style="color:#4b5563;font-size:15px;">Hola <strong>${name || "usuario"}</strong>, detectamos un inicio de sesión en tu cuenta.</p>
+    ${infoBox(`
+      <p style="margin:0 0 6px;color:#0f766e;font-weight:600;">Detalles del acceso:</p>
+      <p style="margin:0;color:#4b5563;font-size:14px;">🕐 <strong>Fecha y hora:</strong> ${formattedTime}</p>
+    `)}
+    <p style="color:#6b7280;font-size:14px;">Si fuiste vos, no necesitás hacer nada. Si no reconocés este acceso, <strong>cambiá tu contraseña inmediatamente</strong>.</p>
+    <div style="text-align:center;">
+      ${ctaButton(`${APP_URL}/dashboard`, "Ir a mi cuenta")}
+    </div>
+  `);
+
+  try {
+    await sendMail({to: email, subject: "Nuevo inicio de sesión en PsicoMatch", html});
+    return {success: true};
+  } catch (err) {
+    console.error("❌ Error enviando notificación de login:", err);
+    return {success: false, error: err.message};
+  }
+});
+
+// ────────────────────────────────────────────────────────────
+// Callable: Notificación de Emparejamiento al Usuario
+// ────────────────────────────────────────────────────────────
+exports.sendMatchNotificationUser = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Debes estar autenticado");
+
+  const {userEmail, userName, professionalName, professionalSpecialty, professionalEmail, compatibilityScore} = request.data;
+
+  const html = baseTemplate(`
+    <h2 style="color:#111827;font-size:22px;font-weight:700;margin-bottom:8px;">¡Encontramos tu match! 🎉</h2>
+    <p style="color:#4b5563;font-size:15px;">Hola <strong>${userName}</strong>, basándonos en tu evaluación emocional, hemos encontrado el profesional ideal para vos:</p>
+    ${infoBox(`
+      <p style="margin:0 0 8px;color:#0f766e;font-weight:700;font-size:16px;">👨‍⚕️ ${professionalName}</p>
+      <p style="margin:0 0 4px;color:#4b5563;font-size:14px;">🎯 <strong>Especialidad:</strong> ${professionalSpecialty || "Psicología General"}</p>
+      ${compatibilityScore ? `<p style="margin:0;color:#4b5563;font-size:14px;">💯 <strong>Compatibilidad:</strong> ${Math.round(compatibilityScore)}%</p>` : ""}
+    `)}
+    <p style="color:#6b7280;font-size:14px;">Podés ver el perfil completo de tu profesional y coordinar tu primera sesión desde el dashboard.</p>
+    <div style="text-align:center;">
+      ${ctaButton(`${APP_URL}/dashboard`, "Ver mi profesional asignado")}
+    </div>
+  `);
+
+  try {
+    await sendMail({to: userEmail, subject: "¡Tenemos un profesional perfecto para vos! 🌟", html});
+    return {success: true};
+  } catch (err) {
+    console.error("❌ Error:", err);
+    return {success: false};
+  }
+});
+
+// ────────────────────────────────────────────────────────────
+// Callable: Notificación de Nuevo Paciente al Profesional
+// ────────────────────────────────────────────────────────────
+exports.sendMatchNotificationProfessional = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Debes estar autenticado");
+
+  const {professionalEmail, professionalName, userName, userSpecialtyNeeds} = request.data;
+
+  const html = baseTemplate(`
+    <h2 style="color:#111827;font-size:22px;font-weight:700;margin-bottom:8px;">Nuevo paciente asignado 👥</h2>
+    <p style="color:#4b5563;font-size:15px;">Hola <strong>${professionalName}</strong>, un nuevo usuario ha sido emparejado con vos según su perfil de necesidades.</p>
+    ${infoBox(`
+      <p style="margin:0 0 8px;color:#0f766e;font-weight:600;">Información del paciente:</p>
+      <p style="margin:0 0 4px;color:#4b5563;font-size:14px;">👤 <strong>Nombre:</strong> ${userName}</p>
+      ${userSpecialtyNeeds ? `<p style="margin:0;color:#4b5563;font-size:14px;">🎯 <strong>Necesidades:</strong> ${Array.isArray(userSpecialtyNeeds) ? userSpecialtyNeeds.join(", ") : userSpecialtyNeeds}</p>` : ""}
+    `)}
+    <p style="color:#6b7280;font-size:14px;">Entrá al dashboard para ver el perfil del paciente y coordinar la primera sesión.</p>
+    <div style="text-align:center;">
+      ${ctaButton(`${APP_URL}/professional-dashboard`, "Ir a mi Dashboard")}
+    </div>
+  `);
+
+  try {
+    await sendMail({to: professionalEmail, subject: "Nuevo paciente asignado en PsicoMatch", html});
+    return {success: true};
+  } catch (err) {
+    console.error("❌ Error:", err);
+    return {success: false};
+  }
+});
+
+// ────────────────────────────────────────────────────────────
+// Callable: Notificación de Detalles de Sesión al Usuario
+// ────────────────────────────────────────────────────────────
+exports.sendSessionDetailsNotification = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Debes estar autenticado");
+
+  const {userEmail, userName, professionalName, sessionDate, sessionType, sessionLink, sessionAddress, sessionNotes} = request.data;
+
+  const modalityInfo = sessionType === "online"
+    ? `<p style="margin:0 0 4px;color:#4b5563;font-size:14px;">💻 <strong>Modalidad:</strong> Online</p>
+       ${sessionLink ? `<p style="margin:0;color:#4b5563;font-size:14px;">🔗 <strong>Enlace:</strong> <a href="${sessionLink}" style="color:#14b8a6;">${sessionLink}</a></p>` : ""}`
+    : `<p style="margin:0 0 4px;color:#4b5563;font-size:14px;">📍 <strong>Modalidad:</strong> Presencial</p>
+       ${sessionAddress ? `<p style="margin:0;color:#4b5563;font-size:14px;">🗺️ <strong>Dirección:</strong> ${sessionAddress}</p>` : ""}`;
+
+  const html = baseTemplate(`
+    <h2 style="color:#111827;font-size:22px;font-weight:700;margin-bottom:8px;">Detalles de tu sesión 📅</h2>
+    <p style="color:#4b5563;font-size:15px;">Hola <strong>${userName}</strong>, tu profesional <strong>${professionalName}</strong> ha confirmado los detalles de tu próxima sesión:</p>
+    ${infoBox(`
+      <p style="margin:0 0 8px;color:#0f766e;font-weight:600;">Información de la sesión:</p>
+      ${sessionDate ? `<p style="margin:0 0 4px;color:#4b5563;font-size:14px;">🕐 <strong>Fecha y hora:</strong> ${sessionDate}</p>` : ""}
+      ${modalityInfo}
+      ${sessionNotes ? `<p style="margin:8px 0 0;color:#6b7280;font-size:13px;font-style:italic;">📝 ${sessionNotes}</p>` : ""}
+    `)}
+    <p style="color:#6b7280;font-size:14px;">Si necesitás reagendar o tenés alguna pregunta, contactá a tu profesional a través del chat de la plataforma.</p>
+    <div style="text-align:center;">
+      ${ctaButton(`${APP_URL}/dashboard`, "Ver en mi Dashboard")}
+    </div>
+  `);
+
+  try {
+    await sendMail({to: userEmail, subject: "Detalles de tu próxima sesión en PsicoMatch 🗓️", html});
+    return {success: true};
+  } catch (err) {
+    console.error("❌ Error:", err);
+    return {success: false};
+  }
+});
+
+// ────────────────────────────────────────────────────────────
+// Callable: Generar y enviar código 2FA (SERVER-SIDE SEGURO)
+// ────────────────────────────────────────────────────────────
+exports.generate2FACode = onCall(async (request) => {
+  const {uid, email} = request.data;
+
+  if (!uid || !email) {
+    throw new HttpsError("invalid-argument", "uid y email son requeridos");
+  }
+
   const db = admin.firestore();
-  const userDoc = await db.collection(
-    recipientType === "user" ? "users" : "professionals"
-  ).doc(recipientId).get();
+  const otpRef = db.collection("otpCodes").doc(uid);
 
-  const user = userDoc.data();
-  if (!user || !user.email) return;
+  // Rate limiting: no permitir nuevo código si el anterior tiene menos de 60s
+  const existing = await otpRef.get();
+  if (existing.exists()) {
+    const data = existing.data();
+    const createdAt = data.createdAt?.toDate?.() || new Date(0);
+    const secondsSince = (Date.now() - createdAt.getTime()) / 1000;
+    if (secondsSince < 60) {
+      throw new HttpsError(
+        "resource-exhausted",
+        `Esperá ${Math.ceil(60 - secondsSince)} segundos antes de pedir un nuevo código.`,
+        {retryAfterSeconds: Math.ceil(60 - secondsSince)}
+      );
+    }
+  }
 
-  const sessionDate = session.scheduledAt.toDate();
-  const options = {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  };
+  // Generar código de 6 dígitos usando crypto (criptográficamente seguro)
+  const code = crypto.randomInt(100000, 999999).toString();
 
-  const mailOptions = {
-    from: "PsicoMatch <noreply@psicomatch.com>",
-    to: user.email,
-    subject: "Recordatorio: Sesión Próxima en PsicoMatch",
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h1 style="color: #6366f1;">Recordatorio de Sesión</h1>
-        <p>Hola ${user.nombre},</p>
-        <p>Te recordamos que tienes una sesión programada:</p>
-        <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <p><strong>📅 Fecha:</strong> ${sessionDate.toLocaleDateString("es-ES", options)}</p>
-          <p><strong>⏰ Duración:</strong> 60 minutos</p>
-          ${session.type === "online" ?
-            "<p><strong>💻 Modalidad:</strong> Online (recibirás el enlace por email)</p>" :
-            "<p><strong>📍 Modalidad:</strong> Presencial</p>"}
-        </div>
-        <p>Por favor, asegúrate de estar disponible con anticipación.</p>
-        <a href="https://psicomatch.com/sessions/${session.id}" 
-           style="background: #6366f1; color: white; padding: 12px 24px; 
-                  text-decoration: none; border-radius: 8px; display: inline-block; margin-top: 20px;">
-          Ver Detalles de la Sesión
-        </a>
+  // Hashear el código con SHA-256 antes de guardarlo
+  const hashedCode = crypto.createHash("sha256").update(code).digest("hex");
+
+  // Guardar en Firestore con TTL de 10 minutos
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+  await otpRef.set({
+    hashedCode,
+    email,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    expiresAt: admin.firestore.Timestamp.fromDate(expiresAt),
+    attempts: 0,
+    used: false,
+  });
+
+  // Enviar email con el código
+  const html = baseTemplate(`
+    <h2 style="color:#111827;font-size:22px;font-weight:700;margin-bottom:8px;">Código de verificación 🔐</h2>
+    <p style="color:#4b5563;font-size:15px;">Ingresá el siguiente código para completar tu inicio de sesión en PsicoMatch:</p>
+    <div style="text-align:center;margin:32px 0;">
+      <div style="display:inline-block;background:linear-gradient(135deg,#f0fdf9,#ede9fe);border:2px solid #14b8a6;border-radius:16px;padding:20px 40px;">
+        <span style="font-size:40px;font-weight:800;letter-spacing:12px;color:#0f766e;font-family:monospace;">${code}</span>
       </div>
-    `,
-  };
+    </div>
+    <p style="color:#6b7280;font-size:13px;text-align:center;">⏰ Este código expira en <strong>10 minutos</strong></p>
+    <div style="background:#fef2f2;border-left:4px solid #f87171;border-radius:8px;padding:12px 16px;margin-top:20px;">
+      <p style="margin:0;color:#991b1b;font-size:13px;">⚠️ <strong>Nunca compartas este código</strong> con nadie, ni siquiera con el equipo de PsicoMatch. Si no solicitaste este código, ignorá este email.</p>
+    </div>
+  `);
 
-  await transporter.sendMail(mailOptions);
-}
+  try {
+    await sendMail({
+      to: email,
+      subject: `${code} - Tu código de verificación de PsicoMatch`,
+      html,
+    });
+    return {success: true};
+  } catch (err) {
+    console.error("❌ Error enviando código 2FA:", err);
+    // Limpiar el código si no se pudo enviar
+    await otpRef.delete();
+    throw new HttpsError("internal", "No se pudo enviar el código por email. Verificá que el email sea correcto.");
+  }
+});
 
-/**
- * Notificar cuando se crea un nuevo match
- */
+// ────────────────────────────────────────────────────────────
+// Callable: Verificar código 2FA (SERVER-SIDE SEGURO)
+// ────────────────────────────────────────────────────────────
+exports.verify2FACode = onCall(async (request) => {
+  const {uid, code} = request.data;
+
+  if (!uid || !code) {
+    throw new HttpsError("invalid-argument", "uid y code son requeridos");
+  }
+
+  const db = admin.firestore();
+  const otpRef = db.collection("otpCodes").doc(uid);
+  const otpDoc = await otpRef.get();
+
+  if (!otpDoc.exists()) {
+    throw new HttpsError("not-found", "Código expirado o no encontrado. Solicitá uno nuevo.");
+  }
+
+  const data = otpDoc.data();
+
+  // Verificar si ya fue usado
+  if (data.used) {
+    await otpRef.delete();
+    throw new HttpsError("not-found", "Este código ya fue utilizado.");
+  }
+
+  // Verificar expiración
+  const expiresAt = data.expiresAt?.toDate?.() || new Date(0);
+  if (Date.now() > expiresAt.getTime()) {
+    await otpRef.delete();
+    throw new HttpsError("not-found", "El código expiró. Solicitá uno nuevo.");
+  }
+
+  // Control de intentos (máximo 5)
+  const MAX_ATTEMPTS = 5;
+  const attempts = data.attempts || 0;
+  if (attempts >= MAX_ATTEMPTS) {
+    await otpRef.delete();
+    throw new HttpsError(
+      "resource-exhausted",
+      "Demasiados intentos fallidos. Por seguridad, tu sesión fue bloqueada."
+    );
+  }
+
+  // Verificar código (comparar hash)
+  const inputHash = crypto.createHash("sha256").update(code.trim()).digest("hex");
+  const isValid = inputHash === data.hashedCode;
+
+  if (!isValid) {
+    // Incrementar intentos
+    await otpRef.update({attempts: attempts + 1});
+    const attemptsLeft = MAX_ATTEMPTS - (attempts + 1);
+    return {success: false, error: "Código incorrecto", attemptsLeft};
+  }
+
+  // Código correcto: marcar como usado y eliminar
+  await otpRef.update({used: true});
+  await otpRef.delete();
+
+  return {success: true};
+});
+
+// ────────────────────────────────────────────────────────────
+// Trigger: Notificar nuevo match (mantener compatibilidad)
+// ────────────────────────────────────────────────────────────
 exports.notifyNewMatch = onDocumentCreated("matches/{matchId}", async (event) => {
   const match = event.data.data();
   const db = admin.firestore();
 
-  // Obtener datos del usuario y profesional
   const [userDoc, professionalDoc] = await Promise.all([
     db.collection("users").doc(match.userId).get(),
     db.collection("professionals").doc(match.professionalId).get(),
@@ -206,123 +418,114 @@ exports.notifyNewMatch = onDocumentCreated("matches/{matchId}", async (event) =>
   const user = userDoc.data();
   const professional = professionalDoc.data();
 
-  // Email al usuario
-  await transporter.sendMail({
-    from: "PsicoMatch <noreply@psicomatch.com>",
-    to: user.email,
-    subject: "¡Tenemos un profesional perfecto para ti!",
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h1 style="color: #6366f1;">¡Nuevo Match! 🎉</h1>
-        <p>Hola ${user.nombre},</p>
-        <p>Hemos encontrado un profesional que se ajusta perfectamente a tus necesidades:</p>
-        <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h2>${professional.nombre}</h2>
-          <p><strong>Especialidad:</strong> ${professional.especialidad}</p>
-          <p><strong>Experiencia:</strong> ${professional.yearsOfExperience} años</p>
-          <p><strong>Rating:</strong> ⭐ ${professional.averageRating}/5.0</p>
-          <p><strong>% de Compatibilidad:</strong> ${match.score}%</p>
-        </div>
-        <a href="https://psicomatch.com/professional/${match.professionalId}" 
-           style="background: #6366f1; color: white; padding: 12px 24px; 
-                  text-decoration: none; border-radius: 8px; display: inline-block;">
-          Ver Perfil Completo
-        </a>
-      </div>
-    `,
-  });
+  if (user?.email && professional) {
+    const html = baseTemplate(`
+      <h2 style="color:#111827;font-size:22px;font-weight:700;">¡Encontramos tu match! 🎉</h2>
+      <p style="color:#4b5563;">Hemos encontrado un profesional ideal para vos:</p>
+      ${infoBox(`
+        <p style="margin:0 0 6px;color:#0f766e;font-weight:700;">${professional.fullName || professional.name}</p>
+        <p style="margin:0;color:#4b5563;font-size:14px;">Especialidad: ${(professional.specialities || [])[0] || "Psicología General"}</p>
+      `)}
+      <div style="text-align:center;">${ctaButton(`${APP_URL}/dashboard`, "Ver mi profesional")}</div>
+    `);
+    await sendMail({to: user.email, subject: "¡Tenemos un profesional perfecto para vos!", html});
+  }
 
-  // Email al profesional
-  await transporter.sendMail({
-    from: "PsicoMatch <noreply@psicomatch.com>",
-    to: professional.email,
-    subject: "Nuevo paciente potencial en PsicoMatch",
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h1 style="color: #6366f1;">Nuevo Paciente Potencial</h1>
-        <p>Hola ${professional.nombre},</p>
-        <p>Un nuevo usuario está buscando profesionales con tu perfil.</p>
-        <p>Asegúrate de tener tu calendario actualizado para recibir solicitudes de sesión.</p>
-        <a href="https://psicomatch.com/professional-dashboard" 
-           style="background: #6366f1; color: white; padding: 12px 24px; 
-                  text-decoration: none; border-radius: 8px; display: inline-block; margin-top: 20px;">
-          Ir a mi Dashboard
-        </a>
-      </div>
-    `,
-  });
-
-  console.log(`✅ Notificaciones de match enviadas: ${match.userId} <-> ${match.professionalId}`);
+  console.log(`✅ Match notificado: ${match.userId} <-> ${match.professionalId}`);
   return null;
 });
 
-/**
- * Marcar sesiones como expiradas si pasó la fecha y no se completaron
- * Se ejecuta diariamente a las 2 AM
- */
+// ────────────────────────────────────────────────────────────
+// Scheduled: Recordatorios de sesión (cada hora)
+// ────────────────────────────────────────────────────────────
+exports.sendSessionReminders = onSchedule("every 1 hours", async (event) => {
+  const db = admin.firestore();
+  const now = admin.firestore.Timestamp.now();
+  const tomorrow = new Date(now.toDate());
+  tomorrow.setHours(tomorrow.getHours() + 24);
+
+  const sessionsSnapshot = await db.collection("sessions")
+    .where("scheduledAt", ">", now)
+    .where("scheduledAt", "<", admin.firestore.Timestamp.fromDate(tomorrow))
+    .where("status", "==", "scheduled")
+    .where("reminderSent", "==", false)
+    .get();
+
+  const promises = [];
+  sessionsSnapshot.forEach((doc) => {
+    const session = doc.data();
+    promises.push(sendSessionReminderEmail(session.userId, session, "user", db));
+    promises.push(sendSessionReminderEmail(session.professionalId, session, "professional", db));
+    promises.push(doc.ref.update({reminderSent: true}));
+  });
+
+  await Promise.all(promises);
+  return null;
+});
+
+async function sendSessionReminderEmail(recipientId, session, recipientType, db) {
+  const collection = recipientType === "user" ? "users" : "professionals";
+  const userDoc = await db.collection(collection).doc(recipientId).get();
+  const user = userDoc.data();
+  if (!user?.email) return;
+
+  const sessionDate = session.scheduledAt?.toDate?.() || new Date();
+  const formattedDate = sessionDate.toLocaleDateString("es-PY", {
+    weekday: "long", year: "numeric", month: "long", day: "numeric",
+    hour: "2-digit", minute: "2-digit", timeZone: "America/Asuncion",
+  });
+
+  const html = baseTemplate(`
+    <h2 style="color:#111827;font-size:22px;font-weight:700;">Recordatorio de sesión 📅</h2>
+    <p style="color:#4b5563;">Hola <strong>${user.name || user.fullName || "usuario"}</strong>, te recordamos que tenés una sesión programada.</p>
+    ${infoBox(`
+      <p style="margin:0 0 4px;color:#0f766e;font-weight:600;">Detalles:</p>
+      <p style="margin:0 0 4px;color:#4b5563;font-size:14px;">📅 <strong>${formattedDate}</strong></p>
+      <p style="margin:0;color:#4b5563;font-size:14px;">⏱️ Duración: 60 minutos</p>
+    `)}
+    <div style="text-align:center;">${ctaButton(`${APP_URL}/dashboard`, "Ver sesión")}</div>
+  `);
+
+  await sendMail({to: user.email, subject: "Recordatorio: Sesión próxima en PsicoMatch 🗓️", html});
+}
+
+// ────────────────────────────────────────────────────────────
+// Scheduled: Expirar sesiones (diario a las 2 AM)
+// ────────────────────────────────────────────────────────────
 exports.markExpiredSessions = onSchedule("0 2 * * *", async (event) => {
   const db = admin.firestore();
   const now = admin.firestore.Timestamp.now();
 
-  // Buscar sesiones programadas que ya pasaron
   const expiredSnapshot = await db.collection("sessions")
     .where("scheduledAt", "<", now)
     .where("status", "==", "scheduled")
     .get();
 
   const batch = db.batch();
-  let count = 0;
-
   expiredSnapshot.forEach((doc) => {
-    batch.update(doc.ref, {
-      status: "expired",
-      expiredAt: now,
-    });
-    count++;
+    batch.update(doc.ref, {status: "expired", expiredAt: now});
   });
 
-  if (count > 0) {
-    await batch.commit();
-    console.log(`✅ Marcadas ${count} sesiones como expiradas`);
-  }
-
+  if (expiredSnapshot.size > 0) await batch.commit();
   return null;
 });
 
-/**
- * Función callable para validar profesionales (solo admins)
- */
+// ────────────────────────────────────────────────────────────
+// Callable: Validar profesional (solo admins)
+// ────────────────────────────────────────────────────────────
 exports.validateProfessional = onCall(async (request) => {
-  // Verificar autenticación
-  if (!request.auth) {
-    throw new HttpsError(
-      "unauthenticated",
-      "Debes estar autenticado"
-    );
-  }
+  if (!request.auth) throw new HttpsError("unauthenticated", "Debes estar autenticado");
 
-  // Verificar que sea admin
   const db = admin.firestore();
   const userDoc = await db.collection("users").doc(request.auth.uid).get();
   const user = userDoc.data();
-
   if (!user || user.role !== "admin") {
-    throw new HttpsError(
-      "permission-denied",
-      "Solo administradores pueden validar profesionales"
-    );
+    throw new HttpsError("permission-denied", "Solo administradores pueden validar profesionales");
   }
 
   const {professionalId, approved, reason} = request.data;
+  if (!professionalId) throw new HttpsError("invalid-argument", "professionalId es requerido");
 
-  if (!professionalId) {
-    throw new HttpsError(
-      "invalid-argument",
-      "professionalId es requerido"
-    );
-  }
-
-  // Actualizar profesional
   const profRef = db.collection("professionals").doc(professionalId);
   await profRef.update({
     isApproved: approved,
@@ -332,36 +535,22 @@ exports.validateProfessional = onCall(async (request) => {
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   });
 
-  // Enviar email al profesional
   const profDoc = await profRef.get();
   const professional = profDoc.data();
-
-  if (professional && professional.email) {
-    const subject = approved ?
-      "¡Tu cuenta ha sido aprobada!" :
-      "Actualización sobre tu registro";
-
-    const html = approved ? `
-      <h1 style="color: #10b981;">¡Felicitaciones!</h1>
-      <p>Tu cuenta profesional en PsicoMatch ha sido aprobada.</p>
-      <p>Ya puedes comenzar a recibir pacientes.</p>
+  if (professional?.email) {
+    const subject = approved ? "¡Tu cuenta ha sido aprobada! 🎉" : "Actualización sobre tu registro";
+    const html = baseTemplate(approved ? `
+      <h2 style="color:#059669;">¡Felicitaciones!</h2>
+      <p style="color:#4b5563;">Tu cuenta profesional en PsicoMatch ha sido <strong>aprobada</strong>. Ya podés comenzar a recibir pacientes.</p>
+      <div style="text-align:center;">${ctaButton(`${APP_URL}/professional-dashboard`, "Ir a mi Dashboard")}</div>
     ` : `
-      <h1 style="color: #f59e0b;">Actualización de Registro</h1>
-      <p>Lamentablemente, no pudimos aprobar tu cuenta en este momento.</p>
-      <p><strong>Razón:</strong> ${reason || "No especificada"}</p>
-      <p>Por favor, contacta a soporte para más información.</p>
-    `;
-
-    await transporter.sendMail({
-      from: "PsicoMatch <noreply@psicomatch.com>",
-      to: professional.email,
-      subject,
-      html: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">${html}</div>`,
-    });
+      <h2 style="color:#d97706;">Actualización de Registro</h2>
+      <p style="color:#4b5563;">Lamentablemente, no pudimos aprobar tu cuenta en este momento.</p>
+      <p style="color:#4b5563;"><strong>Razón:</strong> ${reason || "No especificada"}</p>
+      <p style="color:#6b7280;font-size:14px;">Contactá a soporte para más información.</p>
+    `);
+    await sendMail({to: professional.email, subject, html});
   }
 
-  return {
-    success: true,
-    message: approved ? "Profesional aprobado" : "Profesional rechazado",
-  };
+  return {success: true, message: approved ? "Profesional aprobado" : "Profesional rechazado"};
 });

@@ -395,3 +395,127 @@ input, textarea {
   padding: var(--spacing-sm) var(--spacing-md);
   border-radius: var(--radius-md);
 }
+
+/* ============================================
+   react-phone-number-input - Estilos integrados
+   ============================================ */
+.phone-input-wrapper .PhoneInput {
+  display: flex;
+  align-items: center;
+  background: rgba(249, 250, 251, 0.5);
+  padding: 0;
+}
+
+.phone-input-wrapper .PhoneInputCountry {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 0.5rem 0.75rem 1rem;
+  border-right: 1px solid #e5e7eb;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.phone-input-wrapper .PhoneInputCountrySelect {
+  font-size: 0.875rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  outline: none;
+  color: #374151;
+}
+
+.phone-input-wrapper .PhoneInputCountryIcon {
+  width: 1.25rem;
+  height: auto;
+  margin-right: 0.25rem;
+}
+
+.phone-input-wrapper .PhoneInputInput {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  color: #111827;
+  outline: none;
+  min-width: 0;
+}
+
+.phone-input-wrapper .PhoneInputInput::placeholder {
+  color: #9ca3af;
+}
+
+.phone-input-wrapper .PhoneInputInput:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ============================================
+   Animación shake para errores 2FA
+   ============================================ */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 50%, 90% { transform: translateX(-4px); }
+  30%, 70% { transform: translateX(4px); }
+}
+
+.animate-shake {
+  animation: shake 0.4s ease-in-out;
+}
+
+/* ============================================
+   Mejoras de Responsive Global (Mobile-First)
+   ============================================ */
+
+/* Evitar overflow horizontal en mobile */
+html, body {
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Mejorar touch targets en mobile */
+@media (max-width: 640px) {
+  button, a, input[type="checkbox"], input[type="radio"] {
+    min-height: 44px; /* WCAG 2.5.5 */
+  }
+
+  /* Ajuste de modales en mobile */
+  .modal-content {
+    margin: 0.5rem;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  /* Tablas responsivas */
+  table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Mejorar legibilidad en pantallas pequeñas */
+@media (max-width: 480px) {
+  h1 { font-size: clamp(1.5rem, 5vw, 2.5rem); }
+  h2 { font-size: clamp(1.25rem, 4vw, 2rem); }
+  h3 { font-size: clamp(1rem, 3vw, 1.5rem); }
+}
+
+/* Scrollbar personalizada */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+/* Focus visible mejorado para accesibilidad */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Smooth scroll */
+html {
+  scroll-behavior: smooth;
+}
+

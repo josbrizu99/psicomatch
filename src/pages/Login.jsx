@@ -2,18 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { loginUser, loginWithGoogle, handleGoogleRedirect } from '../services/authService';
 import { useAuth } from '../contexts/AuthContext';
+import { is2FAEnabled } from '../services/twoFactorService';
+import TwoFactorModal from '../components/common/TwoFactorModal';
+import { logoutUser } from '../services/authService';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../firebase/firebase';
 
 const Login = () => {
-  const [formData, setFormData] = useState({
-    email: '',
-    password: ''
-  });
+  const [formData, setFormData] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
+  const [show2FA, setShow2FA] = useState(false);
+  const [pendingUser, setPendingUser] = useState(null);
   const navigate = useNavigate();
-  const { isUserAdmin, currentUser, userData } = useAuth();
+  const { isUserAdmin, currentUser, userData, loading: authLoading } = useAuth();
 
   // Manejar redirección de Google al cargar la página
   useEffect(() => {
@@ -21,68 +25,35 @@ const Login = () => {
       try {
         const result = await handleGoogleRedirect();
         if (result.success) {
-          console.log('✅ Google Sign-In exitoso via redirección en Login');
-          // El contexto de autenticación se actualizará automáticamente
-        } else {
-          console.log('ℹ️ No hay resultado de redirección de Google (normal si no vienes de Google)');
+          console.log('✅ Google Sign-In exitoso via redirección');
         }
       } catch (error) {
         console.error('❌ Error al manejar redirección de Google:', error);
       }
     };
-
     handleGoogleAuth();
   }, []);
 
-  // Redirigir automáticamente si ya está autenticado
+  // Redirigir automáticamente si ya está autenticado (y 2FA resuelto)
   useEffect(() => {
-    console.log('🔄 Login useEffect:', { 
-      currentUser: !!currentUser, 
-      isUserAdmin, 
-      loading,
-      userEmail: currentUser?.email,
-      userUid: currentUser?.uid
-    });
-    
-    if (currentUser && !loading) {
-      console.log('🎯 Usuario autenticado, verificando redirección...');
+    if (currentUser && !authLoading && !loading && !show2FA) {
       if (isUserAdmin) {
-        console.log('✅ Redirigiendo administrador a /admin');
         navigate('/admin');
       } else {
-        // Verificar si es un usuario completamente nuevo (primera vez que inicia sesión)
         const isNewUser = userData?.loginCount === 1;
         const hasCompletedTests = userData?.testsCompleted > 0;
         const hasTestProgress = userData?.testProgress && userData.testProgress !== 'null';
-        
-        console.log('🔍 Verificando criterios de redirección:', {
-          loginCount: userData?.loginCount,
-          isNewUser,
-          testsCompleted: userData?.testsCompleted,
-          hasCompletedTests,
-          testProgress: userData?.testProgress,
-          hasTestProgress
-        });
-        
         if (isNewUser && !hasCompletedTests && !hasTestProgress) {
-          console.log('✅ Usuario completamente nuevo, redirigiendo a /evaluacion-emocional');
           navigate('/evaluacion-emocional');
         } else {
-          console.log('✅ Usuario existente, redirigiendo a /dashboard');
           navigate('/dashboard');
         }
       }
-    } else {
-      console.log('⏳ Esperando autenticación o datos de usuario...');
     }
-  }, [currentUser, isUserAdmin, loading, navigate, userData]);
+  }, [currentUser, isUserAdmin, loading, authLoading, navigate, userData, show2FA]);
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-    // Limpiar error cuando el usuario empiece a escribir
+    setFormData({ ...formData, [e.target.name]: e.target.value });
     if (error) setError('');
   };
 
@@ -92,18 +63,30 @@ const Login = () => {
     setError('');
 
     try {
-      const result = await loginUser(formData.email, formData.password);
+      // Verificar si el email pertenece a un profesional
+      const professionalsRef = collection(db, 'professionals');
+      const q = query(professionalsRef, where('email', '==', formData.email.toLowerCase()));
+      const querySnapshot = await getDocs(q);
       
+      if (!querySnapshot.empty) {
+        setError('Te registraste como profesional. Para acceder a tu cuenta ve al Acceso de Profesionales. Si deseas ingresar como usuario consultante, debes registrarte con otro correo.');
+        setLoading(false);
+        return;
+      }
+
+      const result = await loginUser(formData.email, formData.password);
       if (result.success) {
-        console.log('✅ Login exitoso, esperando redirección automática');
-        // La redirección se manejará automáticamente en el useEffect
-        // cuando se actualice el estado de autenticación
+        // Verificar si el usuario tiene 2FA habilitado
+        const twoFAEnabled = await is2FAEnabled(result.user.uid);
+        if (twoFAEnabled) {
+          setPendingUser(result.user);
+          setShow2FA(true);
+        }
+        // Si no tiene 2FA, el useEffect manejará la redirección automáticamente
       } else {
-        console.log('❌ Error en login:', result.error);
         setError(result.error);
       }
     } catch (error) {
-      console.log('❌ Error en login:', error);
       setError('Error inesperado. Intenta de nuevo.');
       console.error('Error en login:', error);
     } finally {
@@ -114,22 +97,33 @@ const Login = () => {
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     setError('');
-
     try {
+      // Nota: Con Google es más difícil verificar ANTES del login porque no sabemos el email
+      // hasta que Google responde, pero el login de Google automáticamente los autentica en Firebase.
+      // Para evitar que entren, lo controlaremos aquí después del login de Google.
       const result = await loginWithGoogle();
-      
-      if (result.redirect) {
-        // La redirección se manejará automáticamente
-        console.log('🔄 Redirigiendo a Google...');
+      if (result.redirect) return;
+      if (!result.success) {
+        setError(result.error);
+        setGoogleLoading(false);
         return;
       }
-      
-      if (result.success) {
-        // La redirección se manejará automáticamente en el useEffect
-        // cuando se actualice el estado de autenticación
-      } else {
-        setError(result.error);
+
+      // Si fue exitoso, verificamos si es profesional
+      if (result.user) {
+        const professionalsRef = collection(db, 'professionals');
+        const q = query(professionalsRef, where('email', '==', result.user.email.toLowerCase()));
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+          // Desloguear porque es profesional
+          await logoutUser();
+          setError('Te registraste como profesional. Para acceder a tu cuenta ve al Acceso de Profesionales. Si deseas ingresar como usuario consultante, debes registrarte con otro correo.');
+          setGoogleLoading(false);
+          return;
+        }
       }
+      // Si success, verificar 2FA se manejará por el useEffect + estado
     } catch (error) {
       setError('Error inesperado al iniciar sesión con Google.');
       console.error('Error en login con Google:', error);
@@ -138,12 +132,23 @@ const Login = () => {
     }
   };
 
-  // Si ya está autenticado, mostrar loading
-  if (currentUser) {
+  const handle2FAVerified = () => {
+    setShow2FA(false);
+    setPendingUser(null);
+    // El useEffect de currentUser redirigirá
+  };
+
+  const handle2FACancel = async () => {
+    setShow2FA(false);
+    setPendingUser(null);
+    await logoutUser();
+  };
+
+  if (currentUser && !show2FA) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto" />
           <p className="mt-4 text-gray-600">Redirigiendo...</p>
         </div>
       </div>
@@ -151,177 +156,143 @@ const Login = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-surface-off via-primary-50 to-secondary-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-      {/* Decorative background blobs for fluid feel */}
-      <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-primary-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-float-slow"></div>
-      <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-secondary-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-float-slow" style={{ animationDelay: '2s' }}></div>
+    <>
+      {/* Modal 2FA */}
+      {show2FA && pendingUser && (
+        <TwoFactorModal
+          isOpen={show2FA}
+          uid={pendingUser.uid}
+          email={pendingUser.email}
+          onVerified={handle2FAVerified}
+          onCancel={handle2FACancel}
+        />
+      )}
 
-      <div className="max-w-md w-full space-y-8 relative z-10 animate-fade-in">
-        <div className="animate-fade-in-up">
-          <Link to="/" className="flex justify-center">
-            <span className="text-4xl font-extrabold text-primary-600 tracking-tight">Psicomatch</span>
-          </Link>
-          <h2 className="mt-6 text-center text-3xl font-bold text-gray-800">
-            Inicia sesión en tu cuenta
-          </h2>
-          <p className="mt-3 text-center text-sm text-gray-500">
-            ¿No tienes una cuenta?{' '}
-            <Link to="/crear-cuenta" className="font-medium text-primary-600 hover:text-primary-700 transition-colors">
-              Regístrate aquí
+      <div className="min-h-screen bg-gradient-to-br from-surface-off via-primary-50 to-secondary-50 flex items-center justify-center py-8 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+        {/* Decorative blobs */}
+        <div className="absolute top-[-10%] left-[-10%] w-64 h-64 sm:w-96 sm:h-96 bg-primary-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-float-slow" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-64 h-64 sm:w-96 sm:h-96 bg-secondary-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-float-slow" style={{ animationDelay: '2s' }} />
+
+        <div className="max-w-md w-full space-y-6 relative z-10 animate-fade-in">
+          {/* Header */}
+          <div className="animate-fade-in-up text-center">
+            <Link to="/" className="flex justify-center mb-4">
+              <span className="text-3xl sm:text-4xl font-extrabold text-primary-600 tracking-tight">Psicomatch</span>
             </Link>
-          </p>
-        </div>
-        
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="glass-panel p-8 sm:p-10 rounded-[2rem] animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-            <div className="space-y-6">
-              {/* Mensaje de error */}
-              {error && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <div className="flex">
-                    <div className="flex-shrink-0">
-                      <svg className="h-5 w-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                      </svg>
-                    </div>
-                    <div className="ml-3">
-                      <p className="text-sm text-red-800">{error}</p>
-                    </div>
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">
+              Inicia sesión en tu cuenta
+            </h2>
+            <p className="mt-2 text-sm text-gray-500">
+              ¿No tienes una cuenta?{' '}
+              <Link to="/crear-cuenta" className="font-medium text-primary-600 hover:text-primary-700 transition-colors">
+                Regístrate aquí
+              </Link>
+            </p>
+          </div>
+
+          <form className="space-y-5" onSubmit={handleSubmit}>
+            <div className="glass-panel p-6 sm:p-8 rounded-[1.5rem] animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+              <div className="space-y-5">
+                {/* Error */}
+                {error && (
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex items-start gap-3">
+                    <svg className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                    <p className="text-sm text-red-800">{error}</p>
+                  </div>
+                )}
+
+                {/* Email */}
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Correo electrónico
+                  </label>
+                  <input
+                    id="email" name="email" type="email" autoComplete="email" required
+                    value={formData.email} onChange={handleChange}
+                    className="w-full px-4 py-3 bg-white/60 border border-gray-200 placeholder-gray-400 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent transition-all shadow-sm text-sm"
+                    placeholder="tu@email.com"
+                    disabled={loading || googleLoading}
+                  />
+                </div>
+
+                {/* Password */}
+                <div>
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Contraseña
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="password" name="password" type={showPassword ? 'text' : 'password'}
+                      autoComplete="current-password" required
+                      value={formData.password} onChange={handleChange}
+                      className="w-full px-4 py-3 pr-10 bg-white/60 border border-gray-200 placeholder-gray-400 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent transition-all shadow-sm text-sm"
+                      placeholder="Tu contraseña"
+                      disabled={loading || googleLoading}
+                    />
+                    <button type="button" className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                      onClick={() => setShowPassword(!showPassword)} disabled={loading || googleLoading}>
+                      {showPassword ? (
+                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                        </svg>
+                      ) : (
+                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      )}
+                    </button>
                   </div>
                 </div>
-              )}
 
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                  Correo electrónico
-                </label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="appearance-none relative block w-full px-4 py-3 bg-white/60 border border-gray-200 placeholder-gray-400 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent transition-all shadow-sm sm:text-sm"
-                  placeholder="tu@email.com"
-                  disabled={loading || googleLoading}
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                  Contraseña
-                </label>
-                <div className="relative">
-                  <input
-                    id="password"
-                    name="password"
-                    type={showPassword ? 'text' : 'password'}
-                    autoComplete="current-password"
-                    required
-                    value={formData.password}
-                    onChange={handleChange}
-                    className="appearance-none relative block w-full px-4 py-3 pr-10 bg-white/60 border border-gray-200 placeholder-gray-400 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent transition-all shadow-sm sm:text-sm"
-                    placeholder="Tu contraseña"
-                    disabled={loading || googleLoading}
-                  />
-                  <button
-                    type="button"
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                    onClick={() => setShowPassword(!showPassword)}
-                    disabled={loading || googleLoading}
-                  >
-                    {showPassword ? (
-                      <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
-                      </svg>
-                    ) : (
-                      <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <input
-                    id="remember-me"
-                    name="remember-me"
-                    type="checkbox"
-                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                    disabled={loading || googleLoading}
-                  />
-                  <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
-                    Recordarme
+                {/* Remember / Forgot */}
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded" disabled={loading || googleLoading} />
+                    <span className="text-sm text-gray-700">Recordarme</span>
                   </label>
-                </div>
-
-                <div className="text-sm">
-                  <button 
-                    type="button"
-                    className="font-medium text-primary-600 hover:text-primary-500"
-                    disabled={loading || googleLoading}
-                  >
+                  <button type="button" className="text-sm font-medium text-primary-600 hover:text-primary-500" disabled={loading || googleLoading}>
                     ¿Olvidaste tu contraseña?
                   </button>
                 </div>
-              </div>
 
-              <div>
+                {/* Submit */}
                 <button
-                  type="submit"
-                  disabled={loading || googleLoading}
-                  className="group relative w-full flex justify-center py-3.5 px-4 border border-transparent text-sm font-medium rounded-xl text-white bg-primary-600 hover:bg-primary-700 hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-all duration-300 disabled:bg-primary-400 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none shadow-[0_4px_14px_0_rgba(20,184,166,0.39)]"
+                  type="submit" disabled={loading || googleLoading}
+                  className="group relative w-full flex justify-center py-3.5 px-4 border border-transparent text-sm font-semibold rounded-xl text-white bg-primary-600 hover:bg-primary-700 hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-all duration-300 disabled:bg-primary-400 disabled:cursor-not-allowed disabled:hover:translate-y-0 shadow-[0_4px_14px_0_rgba(20,184,166,0.39)]"
                 >
                   {loading ? (
-                    <div className="flex items-center">
-                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    <span className="flex items-center gap-2">
+                      <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                       </svg>
                       Iniciando sesión...
-                    </div>
-                  ) : (
-                    <>
-                      <span className="absolute left-0 inset-y-0 flex items-center pl-3">
-                        <svg className="h-5 w-5 text-primary-200 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-                        </svg>
-                      </span>
-                      Iniciar Sesión
-                    </>
-                  )}
+                    </span>
+                  ) : 'Iniciar Sesión'}
                 </button>
-              </div>
 
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300" />
+                {/* Divider */}
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-300" /></div>
+                  <div className="relative flex justify-center text-sm"><span className="px-2 bg-white/80 text-gray-500">O continúa con</span></div>
                 </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-500">O continúa con</span>
-                </div>
-              </div>
 
-              <div>
+                {/* Google */}
                 <button
-                  type="button"
-                  onClick={handleGoogleLogin}
-                  disabled={loading || googleLoading}
-                  className="w-full flex justify-center items-center py-3.5 px-4 border border-gray-200 rounded-xl shadow-sm bg-white/80 backdrop-blur-sm text-sm font-medium text-gray-700 hover:bg-gray-50 hover:shadow-md hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-sm"
+                  type="button" onClick={handleGoogleLogin} disabled={loading || googleLoading}
+                  className="w-full flex justify-center items-center py-3.5 px-4 border border-gray-200 rounded-xl shadow-sm bg-white/80 backdrop-blur-sm text-sm font-medium text-gray-700 hover:bg-gray-50 hover:shadow-md hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {googleLoading ? (
-                    <div className="flex items-center">
-                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-gray-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    <span className="flex items-center gap-2">
+                      <svg className="animate-spin h-4 w-4 text-gray-700" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                       </svg>
                       Conectando con Google...
-                    </div>
+                    </span>
                   ) : (
                     <>
                       <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
@@ -336,31 +307,19 @@ const Login = () => {
                 </button>
               </div>
             </div>
-          </div>
 
-          <div className="text-center">
-            <p className="text-sm text-gray-600">
-              Al continuar, aceptas nuestros{' '}
-              <button 
-                type="button"
-                className="font-medium text-primary-600 hover:text-primary-500"
-                disabled={loading || googleLoading}
-              >
-                Términos de Servicio
-              </button>{' '}
-              y{' '}
-              <button 
-                type="button"
-                className="font-medium text-primary-600 hover:text-primary-500"
-                disabled={loading || googleLoading}
-              >
-                Política de Privacidad
-              </button>
-            </p>
-          </div>
-        </form>
+            <div className="text-center">
+              <p className="text-xs text-gray-500">
+                Al continuar aceptás nuestros{' '}
+                <button type="button" className="text-primary-600 hover:text-primary-500 font-medium">Términos</button>
+                {' '}y{' '}
+                <button type="button" className="text-primary-600 hover:text-primary-500 font-medium">Privacidad</button>
+              </p>
+            </div>
+          </form>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

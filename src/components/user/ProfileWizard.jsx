@@ -3,6 +3,12 @@ import { updateDoc, doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import PhoneInput from 'react-phone-number-input';
+import 'react-phone-number-input/style.css';
+import ImageUploader from '../common/ImageUploader';
+import { uploadUserProfilePhoto } from '../../services/storageService';
+import { updateProfile } from 'firebase/auth';
+import { auth } from '../../firebase/firebase';
 
 const ProfileWizard = ({ onComplete }) => {
   const { currentUser, userData } = useAuth();
@@ -10,32 +16,42 @@ const ProfileWizard = ({ onComplete }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [showApprovalToast, setShowApprovalToast] = useState(false);
+  const [profilePhotoFile, setProfilePhotoFile] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [formData, setFormData] = useState({
-    // Información personal
     gender: '',
     dateOfBirth: '',
     phone: '',
-    location: '',
+    country: '',
+    city: '',
     language: 'es',
-    timezone: '',
-
-    // Preferencias
+    timezone: 'America/Asuncion',
     theme: 'light',
     privacyLevel: 'medium',
-
-    // Notificaciones
     emailUpdates: false,
     smsUpdates: false,
     notifications: false
   });
 
-  const totalSteps = 4;
+  // Nuevo usuario Google: step 0 = bienvenida + foto
+  const isNewGoogleUser = !userData?.photoURL && currentUser?.providerData?.some(p => p.providerId === 'google.com');
+  const totalSteps = userData?.role === 'professional' ? 1 : 4;
 
   // Detectar zona horaria automáticamente
   useEffect(() => {
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     setFormData(prev => ({ ...prev, timezone }));
   }, []);
+
+  // Si es nuevo usuario de Google sin foto, empezar en step 0
+  useEffect(() => {
+    if (isNewGoogleUser) {
+      setCurrentStep(0);
+    }
+  }, [isNewGoogleUser]);
+
+
 
   // Aviso temporal para profesionales indicando envío y paso a completar perfil
   useEffect(() => {
@@ -74,13 +90,33 @@ const ProfileWizard = ({ onComplete }) => {
         throw new Error('Sesión no válida. Vuelve a iniciar sesión.');
       }
 
+      // Subir foto de perfil si fue seleccionada
+      let photoURL = userData?.photoURL || currentUser?.photoURL || null;
+      if (profilePhotoFile) {
+        setIsUploadingPhoto(true);
+        const uploadResult = await uploadUserProfilePhoto(
+          profilePhotoFile,
+          currentUser.uid,
+          (progress) => setUploadProgress(progress)
+        );
+        setIsUploadingPhoto(false);
+        if (uploadResult.success) {
+          photoURL = uploadResult.url;
+          // Actualizar foto en Firebase Auth
+          await updateProfile(auth.currentUser, { photoURL });
+        } else {
+          console.warn('⚠️ Error al subir foto:', uploadResult.error);
+        }
+      }
+
       // Estructurar datos correctamente
       const userPayload = {
         // Información personal
         gender: formData.gender,
         dateOfBirth: formData.dateOfBirth ? new Date(formData.dateOfBirth) : null,
         phone: formData.phone || 'none',
-        location: formData.location || 'none',
+        location: formData.city && formData.country ? `${formData.city}, ${formData.country}` : 'none',
+        ...(photoURL && { photoURL }),
 
         // Preferencias regionales
         language: formData.language,
@@ -90,7 +126,7 @@ const ProfileWizard = ({ onComplete }) => {
         theme: formData.theme,
         privacyLevel: formData.privacyLevel,
 
-        // Preferencias de notificaciones (estructuradas correctamente)
+        // Preferencias de notificaciones
         preferences: {
           emailUpdates: formData.emailUpdates,
           smsUpdates: formData.smsUpdates,
@@ -102,6 +138,7 @@ const ProfileWizard = ({ onComplete }) => {
         updatedAt: new Date(),
         updatedBy: 'user'
       };
+
 
       console.log('📝 Guardando datos del perfil:', userPayload);
       console.log('🔍 Preferencias de notificaciones:', userPayload.preferences);
@@ -155,9 +192,14 @@ const ProfileWizard = ({ onComplete }) => {
       console.log('✅ Perfil completado exitosamente');
       onComplete();
 
-      // Navegar a la evaluación emocional después de completar el perfil
-      console.log('🔄 Navegando a /evaluacion-emocional después de completar perfil');
-      navigate('/evaluacion-emocional');
+      // Navegar a la ubicación correcta según el rol
+      if (userData?.role === 'professional') {
+        console.log('🔄 Navegando a /dashboard de profesional');
+        navigate('/dashboard');
+      } else {
+        console.log('🔄 Navegando a /evaluacion-emocional después de completar perfil');
+        navigate('/evaluacion-emocional');
+      }
     } catch (error) {
       console.error('❌ Error al completar perfil:', error);
     } finally {
@@ -165,11 +207,50 @@ const ProfileWizard = ({ onComplete }) => {
     }
   };
 
+  // Paso 0: Bienvenida y foto de perfil (solo para usuarios nuevos de Google sin foto)
+  const renderStep0 = () => (
+    <div className="space-y-6 text-center">
+      {/* Leyenda de bienvenida */}
+      <div className="bg-gradient-to-br from-primary-50 to-secondary-50 rounded-2xl p-6 border border-primary-100">
+        <div className="w-14 h-14 bg-primary-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <svg className="w-7 h-7 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+        </div>
+        <h3 className="text-xl font-bold text-gray-900 mb-2">Completemos tu perfil</h3>
+        <p className="text-sm text-gray-600 leading-relaxed">
+          Este paso no te llevará mucho tiempo y nos servirá para saber que sos una persona real
+          y para encontrarte el profesional ideal.
+        </p>
+      </div>
+
+      {/* Upload de foto */}
+      <div className="text-left">
+        <ImageUploader
+          onFileSelected={setProfilePhotoFile}
+          currentPhotoURL={userData?.photoURL || currentUser?.photoURL}
+          uploadProgress={uploadProgress}
+          isUploading={isUploadingPhoto}
+          label="Foto de perfil"
+          hint="Subir tu foto genera confianza con el profesional con quien consultarás. Usá una foto tuya real y clara."
+        />
+        {!profilePhotoFile && !userData?.photoURL && (
+          <div className="mt-3 flex items-start gap-2 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg p-3">
+            <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            <span>Recomendamos subir una foto. Los usuarios con foto generan más confianza.</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   const renderStep1 = () => (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-medium text-gray-900 mb-4">Información Personal</h3>
-        <p className="text-sm text-gray-600 mb-6">Completa tu información básica para personalizar tu experiencia.</p>
+        <h3 className="text-lg font-medium text-gray-900 mb-1">Información Personal</h3>
+        <p className="text-sm text-gray-600">Completá tu información básica para personalizar tu experiencia.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -204,31 +285,96 @@ const ProfileWizard = ({ onComplete }) => {
           />
         </div>
 
-        <div>
+        {userData?.role !== 'professional' && (
+          <>
+            <div className="md:col-span-2">
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Teléfono
           </label>
-          <input
-            type="tel"
-            value={formData.phone}
-            onChange={(e) => handleInputChange('phone', e.target.value)}
-            placeholder="+1 (555) 123-4567"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 placeholder-gray-400"
-          />
+          <div className="phone-input-wrapper border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-primary-500 focus-within:border-primary-500 transition-all">
+            <PhoneInput
+              international
+              defaultCountry="PY"
+              value={formData.phone}
+              onChange={(val) => handleInputChange('phone', val || '')}
+              className="w-full"
+            />
+          </div>
         </div>
 
-        <div>
+        <div className="md:col-span-2">
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Ubicación
           </label>
-          <input
-            type="text"
-            value={formData.location}
-            onChange={(e) => handleInputChange('location', e.target.value)}
-            placeholder="Ciudad, País"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 placeholder-gray-400"
-          />
+          <div className="grid grid-cols-2 gap-4">
+            <select
+              value={formData.country}
+              onChange={(e) => {
+                handleInputChange('country', e.target.value);
+                // Si cambias de país, reseteas la ciudad
+                handleInputChange('city', '');
+              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
+              required
+            >
+              <option value="">Selecciona tu país</option>
+              <option value="Paraguay">Paraguay</option>
+              <option value="Argentina">Argentina</option>
+              <option value="Brasil">Brasil</option>
+              <option value="España">España</option>
+              <option value="Estados Unidos">Estados Unidos</option>
+            </select>
+            <select
+              value={formData.city}
+              onChange={(e) => handleInputChange('city', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
+              required
+              disabled={!formData.country}
+            >
+              <option value="">Selecciona tu ciudad</option>
+              {formData.country === 'Paraguay' && (
+                <>
+                  <option value="Asunción">Asunción</option>
+                  <option value="Ciudad del Este">Ciudad del Este</option>
+                  <option value="Encarnación">Encarnación</option>
+                  <option value="San Lorenzo">San Lorenzo</option>
+                  <option value="Luque">Luque</option>
+                </>
+              )}
+              {formData.country === 'Argentina' && (
+                <>
+                  <option value="Buenos Aires">Buenos Aires</option>
+                  <option value="Córdoba">Córdoba</option>
+                  <option value="Rosario">Rosario</option>
+                  <option value="Mendoza">Mendoza</option>
+                </>
+              )}
+              {formData.country === 'Brasil' && (
+                <>
+                  <option value="São Paulo">São Paulo</option>
+                  <option value="Río de Janeiro">Río de Janeiro</option>
+                  <option value="Brasilia">Brasilia</option>
+                </>
+              )}
+              {formData.country === 'España' && (
+                <>
+                  <option value="Madrid">Madrid</option>
+                  <option value="Barcelona">Barcelona</option>
+                  <option value="Valencia">Valencia</option>
+                </>
+              )}
+              {formData.country === 'Estados Unidos' && (
+                <>
+                  <option value="Miami">Miami</option>
+                  <option value="Nueva York">Nueva York</option>
+                  <option value="Los Ángeles">Los Ángeles</option>
+                </>
+              )}
+            </select>
+          </div>
         </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -268,104 +414,11 @@ const ProfileWizard = ({ onComplete }) => {
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
             required
           >
-            {/* América del Norte */}
-            <optgroup label="América del Norte">
-              <option value="America/New_York">Nueva York (GMT-5/-4)</option>
-              <option value="America/Chicago">Chicago (GMT-6/-5)</option>
-              <option value="America/Denver">Denver (GMT-7/-6)</option>
-              <option value="America/Los_Angeles">Los Ángeles (GMT-8/-7)</option>
-              <option value="America/Anchorage">Alaska (GMT-9/-8)</option>
-              <option value="Pacific/Honolulu">Hawaii (GMT-10)</option>
-              <option value="America/Toronto">Toronto (GMT-5/-4)</option>
-              <option value="America/Vancouver">Vancouver (GMT-8/-7)</option>
-            </optgroup>
-
-            {/* América Central y México */}
-            <optgroup label="América Central y México">
-              <option value="America/Mexico_City">Ciudad de México (GMT-6/-5)</option>
-              <option value="America/Cancun">Cancún (GMT-5)</option>
-              <option value="America/Guatemala">Guatemala (GMT-6)</option>
-              <option value="America/Tegucigalpa">Tegucigalpa (GMT-6)</option>
-              <option value="America/Managua">Managua (GMT-6)</option>
-              <option value="America/San_Jose">San José (GMT-6)</option>
-              <option value="America/Panama">Panamá (GMT-5)</option>
-            </optgroup>
-
-            {/* América del Sur */}
-            <optgroup label="América del Sur">
-              <option value="America/Bogota">Bogotá (GMT-5)</option>
-              <option value="America/Lima">Lima (GMT-5)</option>
-              <option value="America/Caracas">Caracas (GMT-4)</option>
-              <option value="America/La_Paz">La Paz (GMT-4)</option>
-              <option value="America/Santiago">Santiago (GMT-3/-4)</option>
-              <option value="America/Buenos_Aires">Buenos Aires (GMT-3)</option>
-              <option value="America/Montevideo">Montevideo (GMT-3)</option>
-              <option value="America/Sao_Paulo">São Paulo (GMT-3)</option>
-              <option value="America/Recife">Recife (GMT-3)</option>
-              <option value="America/Manaus">Manaus (GMT-4)</option>
-              <option value="America/Rio_Branco">Rio Branco (GMT-5)</option>
-            </optgroup>
-
-            {/* Europa */}
-            <optgroup label="Europa">
-              <option value="Europe/London">Londres (GMT+0/+1)</option>
-              <option value="Europe/Paris">París (GMT+1/+2)</option>
-              <option value="Europe/Madrid">Madrid (GMT+1/+2)</option>
-              <option value="Europe/Rome">Roma (GMT+1/+2)</option>
-              <option value="Europe/Berlin">Berlín (GMT+1/+2)</option>
-              <option value="Europe/Amsterdam">Ámsterdam (GMT+1/+2)</option>
-              <option value="Europe/Brussels">Bruselas (GMT+1/+2)</option>
-              <option value="Europe/Vienna">Viena (GMT+1/+2)</option>
-              <option value="Europe/Zurich">Zúrich (GMT+1/+2)</option>
-              <option value="Europe/Stockholm">Estocolmo (GMT+1/+2)</option>
-              <option value="Europe/Oslo">Oslo (GMT+1/+2)</option>
-              <option value="Europe/Copenhagen">Copenhague (GMT+1/+2)</option>
-              <option value="Europe/Helsinki">Helsinki (GMT+2/+3)</option>
-              <option value="Europe/Warsaw">Varsovia (GMT+1/+2)</option>
-              <option value="Europe/Prague">Praga (GMT+1/+2)</option>
-              <option value="Europe/Budapest">Budapest (GMT+1/+2)</option>
-              <option value="Europe/Bucharest">Bucarest (GMT+2/+3)</option>
-              <option value="Europe/Sofia">Sofía (GMT+2/+3)</option>
-              <option value="Europe/Athens">Atenas (GMT+2/+3)</option>
-              <option value="Europe/Istanbul">Estambul (GMT+3)</option>
-              <option value="Europe/Moscow">Moscú (GMT+3)</option>
-            </optgroup>
-
-            {/* Asia */}
-            <optgroup label="Asia">
-              <option value="Asia/Dubai">Dubái (GMT+4)</option>
-              <option value="Asia/Karachi">Karachi (GMT+5)</option>
-              <option value="Asia/Kolkata">Kolkata (GMT+5:30)</option>
-              <option value="Asia/Dhaka">Dacca (GMT+6)</option>
-              <option value="Asia/Bangkok">Bangkok (GMT+7)</option>
-              <option value="Asia/Jakarta">Jakarta (GMT+7)</option>
-              <option value="Asia/Manila">Manila (GMT+8)</option>
-              <option value="Asia/Shanghai">Shanghái (GMT+8)</option>
-              <option value="Asia/Hong_Kong">Hong Kong (GMT+8)</option>
-              <option value="Asia/Singapore">Singapur (GMT+8)</option>
-              <option value="Asia/Tokyo">Tokio (GMT+9)</option>
-              <option value="Asia/Seoul">Seúl (GMT+9)</option>
-              <option value="Asia/Sydney">Sídney (GMT+10/+11)</option>
-              <option value="Asia/Melbourne">Melbourne (GMT+10/+11)</option>
-            </optgroup>
-
-            {/* África */}
-            <optgroup label="África">
-              <option value="Africa/Cairo">El Cairo (GMT+2)</option>
-              <option value="Africa/Johannesburg">Johannesburgo (GMT+2)</option>
-              <option value="Africa/Lagos">Lagos (GMT+1)</option>
-              <option value="Africa/Casablanca">Casablanca (GMT+1)</option>
-              <option value="Africa/Nairobi">Nairobi (GMT+3)</option>
-              <option value="Africa/Addis_Ababa">Addis Abeba (GMT+3)</option>
-            </optgroup>
-
-            {/* Oceanía */}
-            <optgroup label="Oceanía">
-              <option value="Pacific/Auckland">Auckland (GMT+12/+13)</option>
-              <option value="Pacific/Fiji">Fiyi (GMT+12)</option>
-              <option value="Pacific/Tahiti">Tahití (GMT-10)</option>
-              <option value="Pacific/Guam">Guam (GMT+10)</option>
-            </optgroup>
+            <option value="America/Asuncion">Asunción (UTC-3)</option>
+            <option value="America/Argentina/Buenos_Aires">Buenos Aires (UTC-3)</option>
+            <option value="America/Sao_Paulo">São Paulo (UTC-3)</option>
+            <option value="America/New_York">Nueva York (UTC-5)</option>
+            <option value="Europe/Madrid">Madrid (UTC+1)</option>
           </select>
         </div>
       </div>
@@ -551,6 +604,7 @@ const ProfileWizard = ({ onComplete }) => {
   );
 
   const isStepValid = () => {
+    if (currentStep === 0) return true; // Foto es opcional
     switch (currentStep) {
       case 1:
         return formData.gender && formData.dateOfBirth;
@@ -600,6 +654,7 @@ const ProfileWizard = ({ onComplete }) => {
 
         <div className="bg-white py-8 px-6 shadow rounded-lg">
           {/* Step Content */}
+          {currentStep === 0 && renderStep0()}
           {currentStep === 1 && renderStep1()}
           {currentStep === 2 && renderStep2()}
           {currentStep === 3 && renderStep3()}
@@ -608,12 +663,16 @@ const ProfileWizard = ({ onComplete }) => {
           {/* Navigation */}
           <div className="flex justify-between mt-8">
             <button
-              onClick={prevStep}
-              disabled={currentStep === 1}
-              className={`px-4 py-2 text-sm font-medium rounded-lg ${currentStep === 1
-                ? 'text-gray-400 cursor-not-allowed'
-                : 'text-gray-700 bg-gray-100 hover:bg-gray-200'
-                }`}
+              onClick={() => {
+                if (currentStep === 1 && isNewGoogleUser) setCurrentStep(0);
+                else if (currentStep > 0) setCurrentStep(currentStep - 1);
+              }}
+              disabled={currentStep === 0 || (currentStep === 1 && !isNewGoogleUser)}
+              className={`px-4 py-2 text-sm font-medium rounded-lg ${
+                (currentStep === 0 || (currentStep === 1 && !isNewGoogleUser))
+                  ? 'text-gray-400 cursor-not-allowed'
+                  : 'text-gray-700 bg-gray-100 hover:bg-gray-200'
+              }`}
             >
               Anterior
             </button>
@@ -621,12 +680,15 @@ const ProfileWizard = ({ onComplete }) => {
             <div className="flex space-x-3">
               {currentStep < totalSteps ? (
                 <button
-                  onClick={nextStep}
+                  onClick={() => {
+                    if (currentStep === 0) setCurrentStep(1);
+                    else nextStep();
+                  }}
                   disabled={!isStepValid()}
                   className={`px-6 py-2 text-sm font-medium rounded-lg ${isStepValid()
                     ? 'bg-primary-600 text-white hover:bg-primary-700'
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    }`}
+                  }`}
                 >
                   Siguiente
                 </button>
@@ -637,9 +699,17 @@ const ProfileWizard = ({ onComplete }) => {
                   className={`px-6 py-2 text-sm font-medium rounded-lg ${isStepValid() && !loading
                     ? 'bg-primary-600 text-white hover:bg-primary-700'
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    }`}
+                  }`}
                 >
-                  {loading ? 'Completando...' : 'Completar Perfil'}
+                  {loading ? (
+                    <span className="flex items-center gap-2">
+                      <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      {isUploadingPhoto ? 'Subiendo foto...' : 'Completando...'}
+                    </span>
+                  ) : 'Completar Perfil'}
                 </button>
               )}
             </div>

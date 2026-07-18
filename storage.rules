@@ -1,10 +1,21 @@
 rules_version = '2';
 
-// Craft rules based on data in your Firestore database
-// allow write: if firestore.get(
-//    /databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin;
 service firebase.storage {
   match /b/{bucket}/o {
+    
+    // Reglas para fotos de perfil de usuarios
+    match /userProfilePhoto/{userId}/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Reglas para fotos de perfil de profesionales
+    match /professionalProfilePhotos/{userId}/{allPaths=**} {
+      allow read: if true; // Públicas para que los pacientes las vean
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Por defecto bloquear todo lo demás
     match /{allPaths=**} {
       allow read, write: if false;
     }

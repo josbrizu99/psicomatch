@@ -5,6 +5,11 @@ import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../firebase/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { sendProfessionalAccessCode } from '../services/emailService';
+import ImageUploader from '../components/common/ImageUploader';
+import { uploadProfessionalProfilePhoto } from '../services/storageService';
+import { logUserAction } from '../services/authService';
+import PhoneInput from 'react-phone-number-input';
+import 'react-phone-number-input/style.css';
 
 const ProfessionalRegistration = () => {
   const [formData, setFormData] = useState({
@@ -21,6 +26,8 @@ const ProfessionalRegistration = () => {
     whatsapp: '',
     instagram: '',
     linkedin: '',
+    country: '',
+    city: '',
     // Campos de disponibilidad
     timezone: 'America/Asuncion',
     sessionDuration: 60,
@@ -48,6 +55,11 @@ const ProfessionalRegistration = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [profilePhotoFile, setProfilePhotoFile] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const totalSteps = 5;
 
   const navigate = useNavigate();
@@ -142,6 +154,14 @@ const ProfessionalRegistration = () => {
       setError('El número de teléfono es requerido');
       return false;
     }
+    if (!formData.country) {
+      setError('El país es requerido');
+      return false;
+    }
+    if (!formData.city) {
+      setError('La ciudad es requerida');
+      return false;
+    }
     if (!formData.bio.trim()) {
       setError('La biografía es requerida');
       return false;
@@ -228,7 +248,27 @@ const ProfessionalRegistration = () => {
         displayName: formData.fullName
       });
 
-      // El código de acceso se generará cuando el admin verifique
+      // Subir foto de perfil si fue seleccionada
+      let photoURL = '';
+      if (profilePhotoFile) {
+        setIsUploadingPhoto(true);
+        const uploadResult = await uploadProfessionalProfilePhoto(
+          profilePhotoFile,
+          user.uid,
+          (progress) => setUploadProgress(progress)
+        );
+        setIsUploadingPhoto(false);
+        if (uploadResult.success) {
+          photoURL = uploadResult.url;
+          // Actualizar foto en Firebase Auth también
+          await updateProfile(user, { photoURL });
+        } else {
+          console.warn('⚠️ Error al subir foto de perfil:', uploadResult.error);
+        }
+      }
+
+      // Registrar IP de registro
+      await logUserAction(user.uid, 'register');
 
       // Preparar datos del profesional según la estructura actual
       const professionalData = {
@@ -240,8 +280,11 @@ const ProfessionalRegistration = () => {
         specialities: formData.specialities,
         exprecienceYears: formData.experienceYears, // Nota: manteniendo el typo de la estructura actual
         phone: formData.phone,
+        country: formData.country,
+        city: formData.city,
+        location: `${formData.city}, ${formData.country}`,
         bio: formData.bio,
-        photoURL: '',
+        photoURL,
 
         // Campos de autenticación (código se generará en verificación)
         accessCode: null,
@@ -355,52 +398,94 @@ const ProfessionalRegistration = () => {
         <p className="text-sm text-gray-500">Datos básicos para tu cuenta</p>
       </div>
 
+      <div className="text-left">
+        <label className="block text-sm font-medium text-gray-700 mb-1.5">Foto de Perfil</label>
+        <ImageUploader
+          onFileSelected={setProfilePhotoFile}
+          currentPhotoURL={''}
+          uploadProgress={uploadProgress}
+          isUploading={isUploadingPhoto}
+          label="Sube tu foto"
+          hint="Recomendamos una foto profesional de frente y con buena iluminación."
+        />
+      </div>
+
       <div>
-        <label className="block text-sm font-medium text-gray-700">Nombre Completo *</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1.5">Nombre Completo *</label>
         <input
           type="text"
           name="fullName"
           value={formData.fullName}
           onChange={handleInputChange}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-400"
+          className="w-full px-4 py-3 bg-white/60 border border-gray-200 placeholder-gray-400 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent transition-all shadow-sm text-sm"
           placeholder="Tu nombre completo"
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">Email *</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1.5">Email *</label>
         <input
           type="email"
           name="email"
           value={formData.email}
           onChange={handleInputChange}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-400"
+          className="w-full px-4 py-3 bg-white/60 border border-gray-200 placeholder-gray-400 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent transition-all shadow-sm text-sm"
           placeholder="tu@email.com"
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">Contraseña *</label>
-        <input
-          type="password"
-          name="password"
-          value={formData.password}
-          onChange={handleInputChange}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-400"
-          placeholder="Mínimo 6 caracteres"
-        />
+        <label className="block text-sm font-medium text-gray-700 mb-1.5">Contraseña *</label>
+        <div className="relative">
+          <input
+            type={showPassword ? "text" : "password"}
+            name="password"
+            value={formData.password}
+            onChange={handleInputChange}
+            className="w-full px-4 py-3 pr-10 bg-white/60 border border-gray-200 placeholder-gray-400 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent transition-all shadow-sm text-sm"
+            placeholder="Mínimo 6 caracteres"
+          />
+          <button type="button" className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+            onClick={() => setShowPassword(!showPassword)}>
+            {showPassword ? (
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+              </svg>
+            ) : (
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+            )}
+          </button>
+        </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">Confirmar Contraseña *</label>
-        <input
-          type="password"
-          name="confirmPassword"
-          value={formData.confirmPassword}
-          onChange={handleInputChange}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-400"
-          placeholder="Repite tu contraseña"
-        />
+        <label className="block text-sm font-medium text-gray-700 mb-1.5">Confirmar Contraseña *</label>
+        <div className="relative">
+          <input
+            type={showConfirmPassword ? "text" : "password"}
+            name="confirmPassword"
+            value={formData.confirmPassword}
+            onChange={handleInputChange}
+            className="w-full px-4 py-3 pr-10 bg-white/60 border border-gray-200 placeholder-gray-400 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent transition-all shadow-sm text-sm"
+            placeholder="Repite tu contraseña"
+          />
+          <button type="button" className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+            onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
+            {showConfirmPassword ? (
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+              </svg>
+            ) : (
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -413,13 +498,13 @@ const ProfessionalRegistration = () => {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">Número de Registro Profesional *</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1.5">Número de Registro Profesional *</label>
         <input
           type="text"
           name="professionalCode"
           value={formData.professionalCode}
           onChange={handleInputChange}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+          className="w-full px-4 py-3 bg-white/60 border border-gray-200 placeholder-gray-400 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent transition-all shadow-sm text-sm"
           placeholder="Ej: PSI-12345"
         />
         <p className="mt-1 text-sm text-gray-500">Este número será verificado por el administrador</p>
@@ -443,12 +528,12 @@ const ProfessionalRegistration = () => {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">Años de Experiencia *</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1.5">Años de Experiencia *</label>
         <select
           name="experienceYears"
           value={formData.experienceYears}
           onChange={handleInputChange}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900"
+          className="w-full px-4 py-3 bg-white/60 border border-gray-200 placeholder-gray-400 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent transition-all shadow-sm text-sm"
         >
           <option value="">Seleccionar</option>
           <option value="0">Recién graduado</option>
@@ -469,66 +554,143 @@ const ProfessionalRegistration = () => {
   const renderStep3 = () => (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-medium text-gray-900">Información de Contacto</h3>
-        <p className="text-sm text-gray-500">Datos para que los pacientes te contacten</p>
+        <h3 className="text-lg font-medium text-gray-900">Información de Contacto y Ubicación</h3>
+        <p className="text-sm text-gray-500">Datos para que los pacientes te contacten y encuentren</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">País *</label>
+          <select
+            name="country"
+            value={formData.country}
+            onChange={(e) => {
+              handleInputChange(e);
+              // Resetear ciudad al cambiar de país
+              setFormData(prev => ({ ...prev, city: '' }));
+            }}
+            className="w-full px-4 py-3 bg-white/60 border border-gray-200 placeholder-gray-400 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent transition-all shadow-sm text-sm"
+            required
+          >
+            <option value="">Selecciona tu país</option>
+            <option value="Paraguay">Paraguay</option>
+            <option value="Argentina">Argentina</option>
+            <option value="Brasil">Brasil</option>
+            <option value="España">España</option>
+            <option value="Estados Unidos">Estados Unidos</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Ciudad *</label>
+          <select
+            name="city"
+            value={formData.city}
+            onChange={handleInputChange}
+            className="w-full px-4 py-3 bg-white/60 border border-gray-200 placeholder-gray-400 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent transition-all shadow-sm text-sm"
+            required
+            disabled={!formData.country}
+          >
+            <option value="">Selecciona tu ciudad</option>
+            {formData.country === 'Paraguay' && (
+              <>
+                <option value="Asunción">Asunción</option>
+                <option value="Ciudad del Este">Ciudad del Este</option>
+                <option value="Encarnación">Encarnación</option>
+                <option value="San Lorenzo">San Lorenzo</option>
+                <option value="Luque">Luque</option>
+              </>
+            )}
+            {formData.country === 'Argentina' && (
+              <>
+                <option value="Buenos Aires">Buenos Aires</option>
+                <option value="Córdoba">Córdoba</option>
+                <option value="Rosario">Rosario</option>
+                <option value="Mendoza">Mendoza</option>
+              </>
+            )}
+            {formData.country === 'Brasil' && (
+              <>
+                <option value="São Paulo">São Paulo</option>
+                <option value="Río de Janeiro">Río de Janeiro</option>
+                <option value="Brasilia">Brasilia</option>
+              </>
+            )}
+            {formData.country === 'España' && (
+              <>
+                <option value="Madrid">Madrid</option>
+                <option value="Barcelona">Barcelona</option>
+                <option value="Valencia">Valencia</option>
+              </>
+            )}
+            {formData.country === 'Estados Unidos' && (
+              <>
+                <option value="Miami">Miami</option>
+                <option value="Nueva York">Nueva York</option>
+                <option value="Los Ángeles">Los Ángeles</option>
+              </>
+            )}
+          </select>
+        </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">Teléfono *</label>
-        <input
-          type="tel"
-          name="phone"
-          value={formData.phone}
-          onChange={handleInputChange}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-400"
-          placeholder="+595 9XX XXX XXX"
-        />
+        <label className="block text-sm font-medium text-gray-700 mb-1.5">Teléfono *</label>
+        <div className="phone-input-wrapper bg-white/60 border border-gray-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-primary-400 focus-within:border-transparent transition-all shadow-sm">
+          <PhoneInput
+            international
+            defaultCountry="PY"
+            value={formData.phone}
+            onChange={(val) => setFormData(prev => ({ ...prev, phone: val || '' }))}
+            className="w-full px-4 py-3 text-sm"
+          />
+        </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">WhatsApp</label>
-        <input
-          type="tel"
-          name="whatsapp"
-          value={formData.whatsapp}
-          onChange={handleInputChange}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-400"
-          placeholder="+595 9XX XXX XXX"
-        />
+        <label className="block text-sm font-medium text-gray-700 mb-1.5">WhatsApp</label>
+        <div className="phone-input-wrapper bg-white/60 border border-gray-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-primary-400 focus-within:border-transparent transition-all shadow-sm">
+          <PhoneInput
+            international
+            defaultCountry="PY"
+            value={formData.whatsapp}
+            onChange={(val) => setFormData(prev => ({ ...prev, whatsapp: val || '' }))}
+            className="w-full px-4 py-3 text-sm"
+          />
+        </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">Instagram</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1.5">Instagram</label>
         <input
           type="text"
           name="instagram"
           value={formData.instagram}
           onChange={handleInputChange}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-400"
+          className="w-full px-4 py-3 bg-white/60 border border-gray-200 placeholder-gray-400 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent transition-all shadow-sm text-sm"
           placeholder="@tu_usuario"
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">LinkedIn</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1.5">LinkedIn</label>
         <input
           type="url"
           name="linkedin"
           value={formData.linkedin}
           onChange={handleInputChange}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-400"
+          className="w-full px-4 py-3 bg-white/60 border border-gray-200 placeholder-gray-400 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent transition-all shadow-sm text-sm"
           placeholder="https://linkedin.com/in/tu-perfil"
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">Biografía Profesional *</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1.5">Biografía Profesional *</label>
         <textarea
           name="bio"
           value={formData.bio}
           onChange={handleInputChange}
           rows={4}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-400"
+          className="w-full px-4 py-3 bg-white/60 border border-gray-200 placeholder-gray-400 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent transition-all shadow-sm text-sm"
           placeholder="Cuéntanos sobre tu experiencia, enfoque terapéutico y especialidades..."
         />
         <p className="mt-1 text-sm text-gray-500">Esta información será visible para los pacientes</p>
@@ -544,12 +706,12 @@ const ProfessionalRegistration = () => {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">Zona Horaria</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1.5">Zona Horaria</label>
         <select
           name="timezone"
           value={formData.timezone}
           onChange={handleInputChange}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900"
+          className="w-full px-4 py-3 bg-white/60 border border-gray-200 placeholder-gray-400 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent transition-all shadow-sm text-sm"
         >
           <option value="America/Asuncion">Asunción (UTC-3)</option>
           <option value="America/Argentina/Buenos_Aires">Buenos Aires (UTC-3)</option>

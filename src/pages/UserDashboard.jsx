@@ -6,6 +6,7 @@ import { doc, getDoc, updateDoc, serverTimestamp, collection, query, where, getD
 import { db } from '../firebase/firebase';
 import { getAssignedProfessional, findMatchingProfessional } from '../services/professionalMatchingService';
 import { getUserSessions, listenUserSessions, rateSession, rateProfessional, updateMeetingType } from '../services/userSessionsService';
+// eslint-disable-next-line no-unused-vars
 import { sendMeetingTypeChoiceNotification, sendMeetingDetailsNotification } from '../services/emailService';
 import ChatButton from '../components/chat/ChatButton';
 import ChatContainer from '../components/chat/ChatContainer';
@@ -27,6 +28,7 @@ const UserDashboard = () => {
   const [sessionRating, setSessionRating] = useState(0);
   const [professionalRating, setProfessionalRating] = useState(0);
   const [ratingSessionId, setRatingSessionId] = useState(null);
+  // eslint-disable-next-line no-unused-vars
   const [ratingProfessional, setRatingProfessional] = useState(null);
   const [sessionProgress, setSessionProgress] = useState([]);
   const [notifications, setNotifications] = useState([]);
@@ -250,52 +252,47 @@ const UserDashboard = () => {
     try {
       console.log('🔄 Buscando nuevo profesional...');
 
-      // Obtener los resultados del último test del usuario
-      if (userData?.lastTestResults) {
-        const { findMatchingProfessional } = await import('../services/professionalMatchingService');
-        const { updateDoc, doc, serverTimestamp, increment } = await import('firebase/firestore');
-        const { db } = await import('../firebase/firebase');
+      // Obtener datos frescos del usuario
+      const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+      const freshData = userDoc.exists() ? userDoc.data() : userData;
+      const lastTestResults = freshData?.lastTestResults || userData?.lastTestResults;
 
-        // Buscar un nuevo profesional basado en los resultados del último test
-        const matchingResult = await findMatchingProfessional(
-          currentUser.uid,
-          userData.lastTestResults.specialties || ['general'],
-          userData.lastTestResults
-        );
+      // Usar especialidades del último test, o fallback genérico
+      const specialties = lastTestResults?.recommendedSpecialties ||
+                         lastTestResults?.specialties ||
+                         ['general', 'anxiety', 'depression'];
 
-        if (matchingResult.success) {
-          console.log('✅ Nuevo profesional encontrado:', matchingResult.professional.name);
+      const matchingResult = await findMatchingProfessional(
+        currentUser.uid,
+        specialties,
+        lastTestResults || {}
+      );
 
-          // Actualizar el usuario con el nuevo profesional
-          await updateDoc(doc(db, 'users', currentUser.uid), {
-            matchedProfessional: matchingResult.professional.id,
-            professionalMatches: increment(1),
-            updatedAt: serverTimestamp()
-          });
+      if (matchingResult.success) {
+        console.log('✅ Nuevo profesional encontrado:', matchingResult.professional.name || matchingResult.professional.fullName);
 
-          // Actualizar el estado local
-          setAssignedProfessional(matchingResult.professional);
-          setIsSearchingProfessional(false);
+        await updateDoc(doc(db, 'users', currentUser.uid), {
+          matchedProfessional: matchingResult.professional.id,
+          updatedAt: serverTimestamp()
+        });
 
-          // Recargar los datos del usuario
-          await loadUserData();
+        setAssignedProfessional(matchingResult.professional);
+        setIsSearchingProfessional(false);
+        await loadUserData();
 
-          console.log('✅ Profesional actualizado en el dashboard');
-        } else {
-          console.error('❌ No se pudo encontrar un nuevo profesional:', matchingResult.error);
-          toast.error('No se pudo encontrar un nuevo profesional en este momento. Inténtalo más tarde.');
-        }
+        toast.success(`¡Encontramos un nuevo profesional para vos!`);
       } else {
-        console.error('❌ No hay resultados de test disponibles');
-        toast.error('No se encontraron resultados de evaluación. Por favor, completa una evaluación primero.');
+        console.error('❌ No se pudo encontrar profesional:', matchingResult.error);
+        toast.error('No encontramos un profesional disponible ahora. Intentá más tarde.');
       }
     } catch (error) {
       console.error('❌ Error al buscar nuevo profesional:', error);
-      toast.error('Ocurrió un error al buscar un nuevo profesional. Inténtalo más tarde.');
+      toast.error('Ocurrió un error. Intentá de nuevo.');
     } finally {
       setLoading(false);
     }
   };
+
 
 
   const handleCancelSearchProfessional = () => {
@@ -746,7 +743,19 @@ const UserDashboard = () => {
                     )}
                     {userStats?.careStatus && (
                       <div className="mt-4 text-sm bg-primary-50/50 p-4 rounded-xl border border-primary-100">
-                        <p className="text-primary-900"><strong className="text-primary-700">Estado de atención:</strong> {userStats.careStatus}</p>
+                        <p className="text-primary-900"><strong className="text-primary-700">Estado de atención:</strong> {(() => {
+                          const statusMap = {
+                            'en_progreso': 'En progreso',
+                            'alta': 'Alta',
+                            'pendiente': 'Pendiente',
+                            'activo': 'Activo',
+                            'inactivo': 'Inactivo',
+                            'en_seguimiento': 'En seguimiento',
+                            'nuevo': 'Nuevo',
+                          };
+                          const s = userStats.careStatus;
+                          return statusMap[s] || (s ? s.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : '');
+                        })()}</p>
                         {userStats.careProgress && (
                           <p className="text-primary-800 mt-1"><strong className="text-primary-700">Progreso:</strong> {userStats.careProgress}</p>
                         )}
@@ -1125,8 +1134,7 @@ const UserDashboard = () => {
                   'consultation': 'Consulta',
                   'evaluation': 'Evaluación',
                   'follow-up': 'Seguimiento',
-                  'therapy': 'Terapia',
-                  'evaluation': 'Evaluación'
+                  'therapy': 'Terapia'
                 };
 
                 return (

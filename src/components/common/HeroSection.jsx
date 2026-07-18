@@ -50,6 +50,18 @@ const HeroSection = () => {
                 ¿Ya tienes una cuenta? Inicia sesión
               </Link>
             </div>
+            
+            <div className="mt-8 flex justify-start">
+              <Link 
+                to="/professional-login" 
+                className="text-white/80 hover:text-white text-sm font-medium transition-colors duration-200 flex items-center gap-2 group"
+              >
+                 <span>¿Eres profesional? Únete como especialista o inicia sesión</span>
+                 <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                 </svg>
+              </Link>
+            </div>
           </ScrollReveal>
         </div>
         

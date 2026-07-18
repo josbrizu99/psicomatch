@@ -181,6 +181,12 @@ const Navbar = () => {
             ) : (
               <div className="flex items-center space-x-3">
                 <Link
+                  to="/professional-login"
+                  className="hidden md:block text-secondary-600 hover:bg-secondary-50 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 border border-transparent hover:border-secondary-200"
+                >
+                  Soy Profesional
+                </Link>
+                <Link
                   to="/login"
                   className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200"
                 >
@@ -188,12 +194,13 @@ const Navbar = () => {
                 </Link>
                 <Link
                   to="/crear-cuenta"
-                  className="bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors duration-200"
+                  className="bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors duration-200 shadow-sm"
                 >
                   Crear Cuenta
                 </Link>
               </div>
             )}
+
 
             {/* Botón de menú móvil */}
             <button
@@ -226,6 +233,13 @@ const Navbar = () => {
               )}
               {!currentUser && (
                 <>
+                  <Link
+                    to="/professional-login"
+                    className="block px-3 py-2 text-secondary-600 font-medium hover:text-secondary-700 hover:bg-secondary-50 rounded-md transition-colors duration-200"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Soy Profesional
+                  </Link>
                   <Link
                     to="/login"
                     className="block px-3 py-2 text-gray-700 hover:text-primary-600 hover:bg-gray-50 rounded-md transition-colors duration-200"

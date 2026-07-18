@@ -23,8 +23,18 @@ const useProfileCompletion = (isUserProfessional = false) => {
         const querySnapshot = await getDocs(q);
         
         if (!querySnapshot.empty) {
-          console.log('🔍 Usuario es profesional (encontrado en colección professionals), saltando verificación de completitud del perfil');
-          console.log('✅ Profesional detectado - NO se mostrará ProfileWizard');
+          const profDoc = querySnapshot.docs[0];
+          const profData = profDoc.data();
+          
+          // Si es profesional y está aprobado, pero no tiene género (indicador de que no pasó por ProfileWizard)
+          if (profData.isApproved === true && !profData.gender) {
+            console.log('✅ Profesional aprobado pero sin datos demográficos, necesita ProfileWizard');
+            setNeedsCompletion(true);
+            setLoading(false);
+            return;
+          }
+          
+          console.log('✅ Profesional detectado (no aprobado o ya completado) - NO se mostrará ProfileWizard');
           setNeedsCompletion(false);
           setLoading(false);
           return;
@@ -33,10 +43,11 @@ const useProfileCompletion = (isUserProfessional = false) => {
         console.error('❌ Error al verificar si es profesional:', error);
       }
 
-      // NO verificar completitud del perfil para profesionales
+      // Si se pasa por parámetro (por ejemplo, desde un contexto que ya lo determinó)
+      // y no fue atrapado por la consulta anterior (algo raro, pero por si acaso)
       if (isUserProfessional) {
-        console.log('🔍 Usuario es profesional (parámetro), saltando verificación de completitud del perfil');
-        console.log('✅ Profesional detectado - NO se mostrará ProfileWizard');
+        // En este punto, no sabemos si está aprobado porque no tenemos el doc, 
+        // pero preferimos no mostrarlo por defecto a menos que lo atrape la consulta arriba.
         setNeedsCompletion(false);
         setLoading(false);
         return;

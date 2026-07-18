@@ -97,12 +97,15 @@ psicomatch/
 - [x] Diseño responsive completo
 - [x] Navegación y Enrutamiento
 - [x] Autenticación completa (Email/Password y Google)
+- [x] Autenticación de Dos Factores (2FA) para mayor seguridad
+- [x] Carga de Fotos de Perfil en Firebase Storage
 - [x] Autenticación por roles (Usuario, Profesional, Admin)
 - [x] Panel de Administración con métricas y reportes
-- [x] Registro y Verificación de Profesionales
+- [x] Registro y Verificación de Profesionales (datos demográficos completos)
+- [x] Muestra de Profesionales Reales en la pantalla principal
 - [x] Sistema de Evaluación Emocional y Dashboards de Usuario
 - [x] Chat en Tiempo Real
-- [x] Integración completa con Firebase (Auth, Firestore)
+- [x] Integración completa con Firebase (Auth, Firestore, Storage, Functions)
 - [x] Generación de Reportes PDF/Excel
 
 ### 🚧 En Desarrollo
