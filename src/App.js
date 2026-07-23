@@ -90,7 +90,7 @@ function AppContent() {
 
   // Mostrar ProfileWizard si el perfil necesita completarse
   // PERO NO para profesionales
-  logger.log('🔄 App.js ProfileWizard check:', {
+  logger.log(' App.js ProfileWizard check:', {
     needsCompletion,
     loading,
     profileCompleted,
@@ -124,15 +124,15 @@ function AppContent() {
   }
 
   if (!needsCompletion) {
-    logger.log('❌ NO mostrando ProfileWizard - Perfil ya completo');
+    logger.log('NO mostrando ProfileWizard - Perfil ya completo');
   }
 
   if (loading) {
-    logger.log('❌ NO mostrando ProfileWizard - Aún cargando');
+    logger.log('NO mostrando ProfileWizard - Aún cargando');
   }
 
   if (profileCompleted) {
-    logger.log('❌ NO mostrando ProfileWizard - Perfil ya completado en esta sesión');
+    logger.log('NO mostrando ProfileWizard - Perfil ya completado en esta sesión');
   }
 
   return (

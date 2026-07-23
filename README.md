@@ -100,7 +100,7 @@ psicomatch/
 - [x] Autenticación de Dos Factores (2FA) para mayor seguridad
 - [x] Carga de Fotos de Perfil en Firebase Storage
 - [x] Autenticación por roles (Usuario, Profesional, Admin)
-- [x] Panel de Administración con métricas y reportes
+- [x] Panel de Administración con métricas, reportes y gestión de Contenido del Home dinámico
 - [x] Registro y Verificación de Profesionales (datos demográficos completos)
 - [x] Muestra de Profesionales Reales en la pantalla principal
 - [x] Sistema de Evaluación Emocional y Dashboards de Usuario

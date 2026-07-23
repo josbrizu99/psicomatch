@@ -11,6 +11,7 @@ import { sendMeetingTypeChoiceNotification, sendMeetingDetailsNotification } fro
 import ChatButton from '../components/chat/ChatButton';
 import ChatContainer from '../components/chat/ChatContainer';
 import Modal from '../components/common/Modal';
+import PageLoader from '../components/common/PageLoader';
 import { useConversations } from '../hooks/useChat';
 
 const UserDashboard = () => {
@@ -488,14 +489,7 @@ const UserDashboard = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Cargando tu dashboard...</p>
-        </div>
-      </div>
-    );
+    return <PageLoader text="Cargando tu dashboard..." />;
   }
 
   return (

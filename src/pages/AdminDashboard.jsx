@@ -12,6 +12,7 @@ import ManageReports from '../components/admin/ManageReports';
 import AdminSettings from '../components/admin/AdminSettings';
 import DataSetup from '../components/admin/DataSetup';
 import ManageProfessionalAccess from '../components/admin/ManageProfessionalAccess';
+import ManageHomeContent from '../components/admin/ManageHomeContent';
 import notificationService from '../services/notificationService';
 
 const AdminDashboard = () => {
@@ -41,7 +42,7 @@ const AdminDashboard = () => {
   // Manejar parámetros de URL para navegación desde notificaciones
   useEffect(() => {
     const section = searchParams.get('section');
-    if (section && ['dashboard', 'users', 'professionals', 'evaluation-tests', 'reports', 'settings', 'data-setup'].includes(section)) {
+    if (section && ['dashboard', 'users', 'professionals', 'evaluation-tests', 'reports', 'settings', 'data-setup', 'home-content'].includes(section)) {
       setActiveSection(section);
       // Limpiar el parámetro de URL después de usarlo
       setSearchParams({});
@@ -172,6 +173,8 @@ const AdminDashboard = () => {
         return <AdminSettings key="settings" />;
       case 'data-setup':
         return <DataSetup key="data-setup" />;
+      case 'home-content':
+        return <ManageHomeContent key="home-content" />;
       default:
         return <DashboardHome key="dashboard-default" />;
     }
@@ -187,12 +190,12 @@ const AdminDashboard = () => {
               to="/"
               className="flex items-center space-x-2 group"
             >
-              <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-lg flex items-center justify-center transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3">
+              <div className="w-8 h-8 bg-teal-600 rounded-lg flex items-center justify-center transition-transform duration-200 group-hover:scale-105">
                 <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                 </svg>
               </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-primary-400 to-secondary-400 bg-clip-text text-transparent">
+              <span className="text-xl font-bold text-teal-700">
                 Psicomatch Admin
               </span>
             </Link>
@@ -295,7 +298,7 @@ const AdminDashboard = () => {
             </div>
 
             <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-full flex items-center justify-center">
+              <div className="w-8 h-8 bg-teal-600 rounded-full flex items-center justify-center">
                 <span className="text-white text-sm font-semibold">
                   {userData?.name?.charAt(0)?.toUpperCase() || currentUser?.email?.charAt(0)?.toUpperCase() || 'A'}
                 </span>

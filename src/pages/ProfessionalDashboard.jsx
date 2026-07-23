@@ -20,6 +20,7 @@ import { listenAssignedPatients } from '../services/professionalService';
 import ChatButton from '../components/chat/ChatButton';
 import ChatContainer from '../components/chat/ChatContainer';
 import Modal from '../components/common/Modal';
+import PageLoader from '../components/common/PageLoader';
 import { useConversations } from '../hooks/useChat';
 
 const ProfessionalDashboard = () => {
@@ -1173,14 +1174,7 @@ const ProfessionalDashboard = () => {
   };
 
   if (authLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Cargando panel profesional...</p>
-        </div>
-      </div>
-    );
+    return <PageLoader text="Cargando panel profesional..." />;
   }
 
   if (!professionalData) {

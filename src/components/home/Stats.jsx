@@ -1,8 +1,8 @@
 import React from 'react';
 import ScrollReveal from '../common/ScrollReveal';
 
-const Stats = () => {
-    const statistics = [
+const Stats = ({ customStats }) => {
+    const defaultStatistics = [
         {
             value: '500+',
             label: 'Profesionales Verificados',
@@ -70,7 +70,10 @@ const Stats = () => {
 
                 {/* Stats Grid */}
                 <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-                    {statistics.map((stat, index) => (
+                    {(customStats || defaultStatistics).map((stat, index) => {
+                        // Use default icons and colors by index
+                        const defaultStat = defaultStatistics[index % defaultStatistics.length];
+                        return (
                         <ScrollReveal
                             key={index}
                             direction={index % 2 === 0 ? "scale" : "up"}
@@ -78,8 +81,8 @@ const Stats = () => {
                             className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20 hover:bg-white/20 transition-all duration-300 transform hover:scale-105"
                         >
                             {/* Icon */}
-                            <div className={`w-16 h-16 bg-gradient-to-br ${stat.color} rounded-xl flex items-center justify-center text-white mb-6`}>
-                                {stat.icon}
+                            <div className={`w-16 h-16 bg-gradient-to-br ${defaultStat.color} rounded-xl flex items-center justify-center text-white mb-6`}>
+                                {defaultStat.icon}
                             </div>
 
                             {/* Value */}
@@ -89,15 +92,16 @@ const Stats = () => {
 
                             {/* Label */}
                             <div className="text-lg font-semibold text-primary-100 mb-2">
-                                {stat.label}
+                                {stat.label || defaultStat.label}
                             </div>
 
                             {/* Description */}
                             <p className="text-sm text-primary-200">
-                                {stat.description}
+                                {stat.description || defaultStat.description}
                             </p>
                         </ScrollReveal>
-                    ))}
+                        );
+                    })}
                 </div>
 
                 {/* Additional Info */}

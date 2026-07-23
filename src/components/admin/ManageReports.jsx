@@ -1,6 +1,70 @@
 import React, { useState, useEffect } from 'react';
 import analyticsService from '../../services/analyticsService';
-import SkeletonLoader from '../common/SkeletonLoader';
+import SkeletonLoader, { SkeletonStats, SkeletonTable } from '../common/SkeletonLoader';
+import ExportReports from './ExportReports';
+
+// SVG icons for KPI cards
+const IconUsers = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+  </svg>
+);
+
+const IconProfessionals = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+  </svg>
+);
+
+const IconCalendar = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+  </svg>
+);
+
+const IconStar = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+  </svg>
+);
+
+const IconDownload = () => (
+  <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+  </svg>
+);
+
+const formatDate = (val) => {
+  if (!val) return 'N/A';
+  try {
+    const d = val?.toDate ? val.toDate() : new Date(val);
+    return d.toLocaleString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return 'N/A';
+  }
+};
+
+const StatusBadge = ({ status }) => {
+  const isActive = status === 'Activo' || status === 'active';
+  return (
+    <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+      {isActive ? 'Activo' : status || 'Inactivo'}
+    </span>
+  );
+};
+
+const KpiCard = ({ icon, iconBg, iconColor, label, value, sub }) => (
+  <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+    <div className="flex items-center justify-between mb-3">
+      <p className="text-sm font-medium text-gray-500">{label}</p>
+      <div className={`p-2 rounded-lg ${iconBg}`}>
+        <span className={iconColor}>{icon}</span>
+      </div>
+    </div>
+    <p className="text-3xl font-bold text-gray-900">{value}</p>
+    {sub && <p className="text-xs text-gray-500 mt-1.5">{sub}</p>}
+  </div>
+);
 
 const ManageReports = () => {
   const [loading, setLoading] = useState(true);
@@ -27,14 +91,7 @@ const ManageReports = () => {
           analyticsService.getAllSessions()
         ]);
 
-        setData({
-          system: systemMetrics,
-          users: userStats,
-          professionals: profStats,
-          sessions: sessionStats,
-          userList,
-          sessionList
-        });
+        setData({ system: systemMetrics, users: userStats, professionals: profStats, sessions: sessionStats, userList, sessionList });
       } catch (err) {
         console.error('Error cargando reportes:', err);
         setError('Error al cargar los datos de reportes.');
@@ -48,26 +105,27 @@ const ManageReports = () => {
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Reportes</h1>
-          <p className="text-gray-600">Cargando métricas del sistema...</p>
+          <div className="h-7 w-40 bg-gray-200 rounded animate-pulse mb-2" />
+          <div className="h-4 w-64 bg-gray-100 rounded animate-pulse" />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <SkeletonLoader variant="card" height="120px" count={4} />
+        <SkeletonStats />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <SkeletonLoader variant="card" height="200px" />
+          <SkeletonLoader variant="card" height="200px" />
         </div>
+        <SkeletonTable rows={5} columns={5} />
+        <SkeletonTable rows={5} columns={5} />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-4 bg-red-50 text-red-700 rounded-lg">
-        {error}
-        <button
-          onClick={() => window.location.reload()}
-          className="ml-4 text-sm underline hover:text-red-800"
-        >
+      <div className="p-4 bg-red-50 border border-red-100 text-red-700 rounded-xl text-sm flex items-center justify-between">
+        <span>{error}</span>
+        <button onClick={() => window.location.reload()} className="text-sm underline hover:text-red-800 ml-4">
           Reintentar
         </button>
       </div>
@@ -76,215 +134,220 @@ const ManageReports = () => {
 
   const { system, users, professionals, sessions, userList, sessionList } = data;
 
-  const downloadCSV = (data, filename) => {
-    if (!data || !data.length) return;
-
-    const headers = Object.keys(data[0]);
-    const csvContent = [
-      headers.join(','),
-      ...data.map(row => headers.map(header => JSON.stringify(row[header] || '')).join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const downloadCSV = (rows, filename) => {
+    if (!rows || !rows.length) return;
+    const headers = Object.keys(rows[0]);
+    const csv = [headers.join(','), ...rows.map(r => headers.map(h => JSON.stringify(r[h] || '')).join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
-    if (link.download !== undefined) {
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', filename);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
+
+  // Actividad reciente: usuarios ordenados por ultimo login
+  const recentActivity = [...(userList || [])]
+    .filter(u => u.lastLoginAt || u.createdAt)
+    .sort((a, b) => {
+      const da = a.lastLoginAt?.toDate ? a.lastLoginAt.toDate() : new Date(a.lastLoginAt || a.createdAt);
+      const db_ = b.lastLoginAt?.toDate ? b.lastLoginAt.toDate() : new Date(b.lastLoginAt || b.createdAt);
+      return db_ - da;
+    })
+    .slice(0, 10);
 
   return (
     <div className="space-y-8">
-      <div className="flex justify-between items-center">
+      {/* Header */}
+      <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard de Reportes</h1>
-          <p className="text-gray-600">Visión general y descarga de datos</p>
-        </div>
-        <div className="space-x-4">
-          <button
-            onClick={() => downloadCSV(userList, 'usuarios_psicomatch.csv')}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
-            disabled={!userList?.length}
-          >
-            📊 Exportar Usuarios
-          </button>
-          <button
-            onClick={() => downloadCSV(sessionList, 'sesiones_psicomatch.csv')}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-            disabled={!sessionList?.length}
-          >
-            📅 Exportar Sesiones
-          </button>
+          <h1 className="text-2xl font-bold text-gray-900">Reportes</h1>
+          <p className="text-gray-500 text-sm mt-1">Vision general de la plataforma y actividad reciente</p>
         </div>
       </div>
+      
+      {/* Export Section */}
+      <ExportReports stats={system} />
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium text-gray-500">Total Usuarios</h3>
-            <span className="p-2 bg-blue-100 text-blue-600 rounded-full">👥</span>
-          </div>
-          <p className="text-3xl font-bold text-gray-900">{system?.totalUsers || 0}</p>
-          <p className="text-xs text-green-600 mt-2">{users?.newThisMonth || 0} nuevos este mes</p>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium text-gray-500">Profesionales</h3>
-            <span className="p-2 bg-purple-100 text-purple-600 rounded-full">👨‍⚕️</span>
-          </div>
-          <p className="text-3xl font-bold text-gray-900">{system?.totalProfessionals || 0}</p>
-          <div className="flex gap-2 mt-2 text-xs">
-            <span className="text-green-600">{professionals?.active || 0} activos</span>
-            <span className="text-gray-400">|</span>
-            <span className="text-orange-600">{professionals?.pending || 0} pendientes</span>
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium text-gray-500">Sesiones Totales</h3>
-            <span className="p-2 bg-green-100 text-green-600 rounded-full">📅</span>
-          </div>
-          <p className="text-3xl font-bold text-gray-900">{system?.totalSessions || 0}</p>
-          <p className="text-xs text-gray-500 mt-2">Tasa de completado: {sessions?.completionRate || 0}%</p>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium text-gray-500">Valoración Media</h3>
-            <span className="p-2 bg-yellow-100 text-yellow-600 rounded-full">⭐</span>
-          </div>
-          <p className="text-3xl font-bold text-gray-900">{system?.averageRating || 0}</p>
-          <p className="text-xs text-gray-500 mt-2">Basado en {system?.totalReviews || 0} reseñas</p>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+        <KpiCard
+          icon={<IconUsers />}
+          iconBg="bg-teal-50"
+          iconColor="text-teal-600"
+          label="Total Usuarios"
+          value={system?.totalUsers || 0}
+          sub={`${users?.newThisMonth || 0} nuevos este mes`}
+        />
+        <KpiCard
+          icon={<IconProfessionals />}
+          iconBg="bg-indigo-50"
+          iconColor="text-indigo-600"
+          label="Profesionales"
+          value={system?.totalProfessionals || 0}
+          sub={`${professionals?.active || 0} activos · ${professionals?.pending || 0} pendientes`}
+        />
+        <KpiCard
+          icon={<IconCalendar />}
+          iconBg="bg-blue-50"
+          iconColor="text-blue-600"
+          label="Sesiones Totales"
+          value={system?.totalSessions || 0}
+          sub={`Tasa de completado: ${sessions?.completionRate || 0}%`}
+        />
+        <KpiCard
+          icon={<IconStar />}
+          iconBg="bg-amber-50"
+          iconColor="text-amber-500"
+          label="Valoracion Media"
+          value={system?.averageRating || 0}
+          sub={`Basado en ${system?.totalReviews || 0} reseñas`}
+        />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Distribución por Especialidad */}
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-lg font-semibold text-gray-800 mb-6">Profesionales por Especialidad</h3>
-          <div className="space-y-4">
+      {/* Distribuciones */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Profesionales por especialidad */}
+        <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+          <h3 className="text-sm font-semibold text-gray-800 mb-5 uppercase tracking-wide">Profesionales por especialidad</h3>
+          <div className="space-y-3">
             {Object.entries(professionals?.specialtyDistribution || {}).length > 0 ? (
               Object.entries(professionals.specialtyDistribution)
                 .sort(([, a], [, b]) => b - a)
                 .map(([specialty, count], index) => {
-                  const percentage = Math.round((count / (system?.totalProfessionals || 1)) * 100);
+                  const pct = Math.round((count / (system?.totalProfessionals || 1)) * 100);
                   return (
                     <div key={specialty}>
                       <div className="flex justify-between text-sm mb-1">
-                        <span className="font-medium text-gray-700">{specialty}</span>
-                        <span className="text-gray-500">{count} ({percentage}%)</span>
+                        <span className="text-gray-700 font-medium">{specialty}</span>
+                        <span className="text-gray-400">{count} ({pct}%)</span>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div
-                          className={`h-2 rounded-full ${index % 2 === 0 ? 'bg-indigo-500' : 'bg-purple-500'}`}
-                          style={{ width: `${percentage}%` }}
-                        ></div>
+                      <div className="w-full bg-gray-100 rounded-full h-1.5">
+                        <div className="h-1.5 rounded-full bg-teal-500" style={{ width: `${pct}%` }} />
                       </div>
                     </div>
                   );
                 })
             ) : (
-              <p className="text-gray-500 text-center py-4">No hay datos de especialidades</p>
+              <p className="text-gray-400 text-sm text-center py-6">Sin datos de especialidades</p>
             )}
           </div>
         </div>
 
-        {/* Estado de Sesiones */}
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-lg font-semibold text-gray-800 mb-6">Estado de Sesiones</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 bg-gray-50 rounded-lg text-center">
-              <div className="text-2xl font-bold text-blue-600">{sessions?.byStatus?.scheduled || 0}</div>
-              <div className="text-sm text-gray-600">Programadas</div>
-            </div>
-            <div className="p-4 bg-gray-50 rounded-lg text-center">
-              <div className="text-2xl font-bold text-green-600">{sessions?.byStatus?.completed || 0}</div>
-              <div className="text-sm text-gray-600">Completadas</div>
-            </div>
-            <div className="p-4 bg-gray-50 rounded-lg text-center">
-              <div className="text-2xl font-bold text-yellow-600">{sessions?.byStatus?.inProgress || 0}</div>
-              <div className="text-sm text-gray-600">En Progreso</div>
-            </div>
-            <div className="p-4 bg-gray-50 rounded-lg text-center">
-              <div className="text-2xl font-bold text-red-600">{sessions?.byStatus?.cancelled || 0}</div>
-              <div className="text-sm text-gray-600">Canceladas</div>
-            </div>
+        {/* Estado de sesiones */}
+        <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+          <h3 className="text-sm font-semibold text-gray-800 mb-5 uppercase tracking-wide">Estado de sesiones</h3>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { label: 'Programadas', value: sessions?.byStatus?.scheduled || 0, color: 'text-blue-600', bg: 'bg-blue-50' },
+              { label: 'Completadas', value: sessions?.byStatus?.completed || 0, color: 'text-green-600', bg: 'bg-green-50' },
+              { label: 'En progreso', value: sessions?.byStatus?.inProgress || 0, color: 'text-amber-600', bg: 'bg-amber-50' },
+              { label: 'Canceladas', value: sessions?.byStatus?.cancelled || 0, color: 'text-red-600', bg: 'bg-red-50' },
+            ].map(({ label, value, color, bg }) => (
+              <div key={label} className={`p-4 rounded-xl ${bg} text-center`}>
+                <div className={`text-2xl font-bold ${color}`}>{value}</div>
+                <div className="text-xs text-gray-600 mt-1">{label}</div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Tabla de Usuarios Recientes */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-800">Últimos Usuarios Registrados</h3>
+      {/* Actividad reciente de usuarios */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900">Actividad reciente de usuarios</h3>
+            <p className="text-xs text-gray-400 mt-0.5">Ultimas sesiones registradas en la plataforma</p>
+          </div>
+          <span className="text-xs font-medium text-gray-400 bg-gray-50 px-2.5 py-1 rounded-full border border-gray-100">
+            {recentActivity.length} registros
+          </span>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+          <table className="min-w-full divide-y divide-gray-100">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rol</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha Registro</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                {['Usuario', 'Ultimo acceso', 'IP de acceso', 'Sesiones', 'Estado'].map(h => (
+                  <th key={h} className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">{h}</th>
+                ))}
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {userList?.slice(0, 5).map((user) => (
-                <tr key={user.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.email}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">{user.role}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(user.createdAt).toLocaleDateString()}</td>
+            <tbody className="bg-white divide-y divide-gray-50">
+              {recentActivity.length > 0 ? recentActivity.map((user) => (
+                <tr key={user.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.status === 'Activo' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                      {user.status}
-                    </span>
+                    <div className="flex items-center">
+                      <div className="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center flex-shrink-0">
+                        <span className="text-xs font-semibold text-teal-700">
+                          {(user.name || user.email || '?').charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-sm font-medium text-gray-900">{user.name || 'Sin nombre'}</p>
+                        <p className="text-xs text-gray-400">{user.email}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    {formatDate(user.lastLoginAt || user.createdAt)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-500">
+                    {user.lastLoginIP || user.lastIp || '—'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    {user.loginCount || 0}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <StatusBadge status={user.status} />
                   </td>
                 </tr>
-              ))}
+              )) : (
+                <tr>
+                  <td colSpan={5} className="px-6 py-10 text-center text-sm text-gray-400">
+                    Sin actividad registrada
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Tabla de Sesiones Recientes */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-800">Sesiones Recientes</h3>
+      {/* Ultimas sesiones */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100">
+          <h3 className="text-sm font-semibold text-gray-900">Sesiones recientes</h3>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+          <table className="min-w-full divide-y divide-gray-100">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paciente</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Profesional</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                {['Paciente', 'Profesional', 'Fecha', 'Tipo', 'Estado'].map(h => (
+                  <th key={h} className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">{h}</th>
+                ))}
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {sessionList?.slice(0, 5).map((session) => (
-                <tr key={session.id}>
+            <tbody className="bg-white divide-y divide-gray-50">
+              {sessionList?.slice(0, 8).map((session) => (
+                <tr key={session.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{session.patientName}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{session.professionalName}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{session.date} {session.time}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">{session.type}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${session.status === 'completed' ? 'bg-green-100 text-green-800' :
-                      session.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
-                        session.status === 'inProgress' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'
-                      }`}>
+                    <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                      session.status === 'completed' ? 'bg-green-100 text-green-700' :
+                      session.status === 'scheduled' ? 'bg-blue-100 text-blue-700' :
+                      session.status === 'inProgress' ? 'bg-amber-100 text-amber-700' :
+                      'bg-gray-100 text-gray-600'
+                    }`}>
                       {session.status === 'scheduled' ? 'Programada' :
-                        session.status === 'completed' ? 'Completada' :
-                          session.status === 'inProgress' ? 'En Progreso' : session.status}
+                       session.status === 'completed' ? 'Completada' :
+                       session.status === 'inProgress' ? 'En progreso' : session.status}
                     </span>
                   </td>
                 </tr>

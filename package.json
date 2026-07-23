@@ -15,6 +15,8 @@
     "emailjs-com": "^3.2.0",
     "firebase": "^12.2.1",
     "framer-motion": "^12.23.24",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
     "react": "^19.1.1",
     "react-chartjs-2": "^5.3.0",
     "react-dom": "^19.1.1",
@@ -23,13 +25,20 @@
     "react-router-dom": "^7.8.1",
     "react-scripts": "5.0.1",
     "recharts": "^3.5.1",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "^2.1.4",
+    "xlsx": "^0.18.5"
   },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report tests/reports/playwright-html",
+    "test:perf": "node tests/performance/lighthouse.js",
+    "test:json": "playwright test --project=\"Desktop Chrome\" --reporter=json 2>nul | Out-File -Encoding utf8 tests/reports/results.json",
+    "test:graficos": "python tests/analytics/generar_graficos.py"
   },
   "eslintConfig": {
     "extends": [
@@ -50,7 +59,10 @@
     ]
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "autoprefixer": "^10.4.21",
+    "chrome-launcher": "^1.2.1",
+    "lighthouse": "^13.4.1",
     "postcss": "^8.5.6",
     "puppeteer": "^24.32.0",
     "tailwindcss": "^3.4.17"

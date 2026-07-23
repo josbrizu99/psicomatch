@@ -18,6 +18,7 @@ const ManageProfessionalAccess = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [professionalToDelete, setProfessionalToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     loadProfessionals();
@@ -152,51 +153,34 @@ const ManageProfessionalAccess = () => {
 
     try {
       setDeleting(true);
-      console.log('🔄 Iniciando eliminación del profesional:', professionalToDelete.id);
+      console.log('Iniciando eliminacion del profesional:', professionalToDelete.id);
       
       // Eliminar solo datos de Firestore
-      console.log('🔄 Eliminando datos de Firestore...');
-      
-      // 1. Eliminar documento principal de profesionales
       await deleteDoc(doc(db, 'professionals', professionalToDelete.id));
-      console.log('✅ Documento de profesional eliminado');
       
-      // 2. Eliminar datos relacionados en otras colecciones
+      // Eliminar datos relacionados en otras colecciones
       try {
-        // Eliminar datos de professionalSchedules
         const schedulesQuery = query(collection(db, 'professionalSchedules'), where('professionalId', '==', professionalToDelete.id));
         const schedulesSnapshot = await getDocs(schedulesQuery);
-        const schedulesPromises = schedulesSnapshot.docs.map(doc => deleteDoc(doc.ref));
-        await Promise.all(schedulesPromises);
-        console.log('✅ Horarios profesionales eliminados');
+        await Promise.all(schedulesSnapshot.docs.map(doc => deleteDoc(doc.ref)));
         
-        // Eliminar datos de appointments relacionados
         const appointmentsQuery = query(collection(db, 'appointments'), where('professionalId', '==', professionalToDelete.id));
         const appointmentsSnapshot = await getDocs(appointmentsQuery);
-        const appointmentsPromises = appointmentsSnapshot.docs.map(doc => deleteDoc(doc.ref));
-        await Promise.all(appointmentsPromises);
-        console.log('✅ Citas eliminadas');
+        await Promise.all(appointmentsSnapshot.docs.map(doc => deleteDoc(doc.ref)));
         
-        // Eliminar datos de messages relacionados
         const messagesQuery = query(collection(db, 'messages'), where('professionalId', '==', professionalToDelete.id));
         const messagesSnapshot = await getDocs(messagesQuery);
-        const messagesPromises = messagesSnapshot.docs.map(doc => deleteDoc(doc.ref));
-        await Promise.all(messagesPromises);
-        console.log('✅ Mensajes eliminados');
+        await Promise.all(messagesSnapshot.docs.map(doc => deleteDoc(doc.ref)));
         
-        // Eliminar datos de notifications relacionados
         const notificationsQuery = query(collection(db, 'notifications'), where('professionalId', '==', professionalToDelete.id));
         const notificationsSnapshot = await getDocs(notificationsQuery);
-        const notificationsPromises = notificationsSnapshot.docs.map(doc => deleteDoc(doc.ref));
-        await Promise.all(notificationsPromises);
-        console.log('✅ Notificaciones eliminadas');
+        await Promise.all(notificationsSnapshot.docs.map(doc => deleteDoc(doc.ref)));
         
       } catch (relatedError) {
-        console.warn('⚠️ Error al eliminar datos relacionados:', relatedError);
-        // Continuar aunque haya errores en datos relacionados
+        console.warn('Error al eliminar datos relacionados:', relatedError);
       }
       
-      console.log('✅ Profesional eliminado exitosamente');
+      console.log('Profesional eliminado exitosamente');
       setSuccess(`Profesional ${professionalToDelete.name} eliminado exitosamente`);
       
       // Recargar la lista
@@ -206,20 +190,44 @@ const ManageProfessionalAccess = () => {
       closeDeleteModal();
       
     } catch (error) {
-      console.error('❌ Error al eliminar profesional:', error);
+      console.error('Error al eliminar profesional:', error);
       setError('Error al eliminar profesional: ' + error.message);
     } finally {
       setDeleting(false);
     }
   };
 
+  const filteredProfessionals = professionals.filter(p => {
+    const term = searchTerm.toLowerCase();
+    return (
+      (p.name || '').toLowerCase().includes(term) ||
+      (p.fullName || '').toLowerCase().includes(term) ||
+      (p.email || '').toLowerCase().includes(term)
+    );
+  });
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Cargando profesionales...</p>
+      <div className="space-y-6">
+        <div>
+          <div className="h-7 w-72 bg-gray-200 rounded animate-pulse mb-2" />
+          <div className="h-4 w-56 bg-gray-100 rounded animate-pulse" />
         </div>
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+          <div className="h-10 bg-gray-100 rounded-lg animate-pulse" />
+        </div>
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex items-center space-x-4">
+            <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse flex-shrink-0" />
+            <div className="flex-1 space-y-2">
+              <div className="h-4 bg-gray-200 rounded animate-pulse w-40" />
+              <div className="h-3 bg-gray-100 rounded animate-pulse w-56" />
+            </div>
+            <div className="flex space-x-2">
+              {[...Array(4)].map((_, j) => <div key={j} className="w-8 h-8 bg-gray-100 rounded-lg animate-pulse" />)}
+            </div>
+          </div>
+        ))}
       </div>
     );
   }
@@ -229,9 +237,35 @@ const ManageProfessionalAccess = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Gestión de Acceso de Profesionales</h1>
-          <p className="text-gray-600">Administra los códigos de acceso de los profesionales</p>
+          <h1 className="text-2xl font-bold text-gray-900">Gestion de Acceso de Profesionales</h1>
+          <p className="text-gray-500 text-sm mt-1">Administra los codigos de acceso y permisos de los profesionales</p>
         </div>
+      </div>
+
+      {/* Search bar */}
+      <div className="relative">
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
+        <input
+          type="text"
+          placeholder="Buscar por nombre o email..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full pl-10 pr-10 py-2.5 text-sm text-gray-900 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white shadow-sm transition-shadow"
+        />
+        {searchTerm && (
+          <button
+            onClick={() => setSearchTerm('')}
+            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* Mensajes */}
@@ -258,9 +292,10 @@ const ManageProfessionalAccess = () => {
       )}
 
       {/* Lista de profesionales */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">Profesionales</h3>
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-gray-900">Profesionales</h3>
+          <span className="text-xs text-gray-400 bg-gray-50 px-2.5 py-1 rounded-full border border-gray-100">{filteredProfessionals.length} registros</span>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -280,78 +315,104 @@ const ManageProfessionalAccess = () => {
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {professionals.map((professional) => {
+            <tbody className="bg-white divide-y divide-gray-50">
+              {filteredProfessionals.length === 0 ? (
+                <tr><td colSpan={4} className="px-6 py-10 text-center text-sm text-gray-400">Sin resultados para la busqueda</td></tr>
+              ) : filteredProfessionals.map((professional) => {
                 const accessCodeStatus = getAccessCodeStatus(professional.accessCode);
                 return (
-                  <tr key={professional.id}>
+                  <tr key={professional.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {professional.name}
+                      <div className="flex items-center">
+                        <div className="w-9 h-9 rounded-full bg-teal-100 flex items-center justify-center flex-shrink-0">
+                          <span className="text-xs font-semibold text-teal-700">
+                            {(professional.fullName || professional.name || '?').charAt(0).toUpperCase()}
+                          </span>
                         </div>
-                        <div className="text-sm text-gray-500">
-                          {professional.email}
+                        <div className="ml-3">
+                          <div className="text-sm font-medium text-gray-900">{professional.fullName || professional.name}</div>
+                          <div className="text-xs text-gray-400">{professional.email}</div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(professional.status)}`}>
+                      <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${getStatusColor(professional.status)}`}>
                         {professional.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center space-x-2">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${accessCodeStatus.color}`}>
+                        <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${accessCodeStatus.color}`}>
                           {accessCodeStatus.status}
                         </span>
                         {showAccessCode[professional.id] && (
-                          <span className="text-sm font-mono text-gray-900">
+                          <span className="text-sm font-mono text-gray-700 bg-gray-100 px-2 py-0.5 rounded">
                             {showAccessCode[professional.id]}
                           </span>
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                      <button
-                        onClick={() => handleShowAccessCode(professional.id)}
-                        className="text-blue-600 hover:text-blue-900"
-                      >
-                        Ver Código
-                      </button>
-                      
-                      {professional.status === 'active' ? (
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center space-x-1">
+                        {/* Ver codigo */}
                         <button
-                          onClick={() => handleDeactivateAccess(professional.id)}
-                          className="text-red-600 hover:text-red-900"
+                          onClick={() => handleShowAccessCode(professional.id)}
+                          title="Ver codigo de acceso"
+                          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                         >
-                          Desactivar
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
                         </button>
-                      ) : (
+
+                        {/* Desactivar / Reactivar */}
+                        {professional.status === 'active' ? (
+                          <button
+                            onClick={() => handleDeactivateAccess(professional.id)}
+                            title="Desactivar acceso"
+                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                            </svg>
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleReactivateAccess(professional.id)}
+                            title="Reactivar acceso"
+                            className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          </button>
+                        )}
+
+                        {/* Regenerar codigo */}
+                        {professional.status === 'active' && (
+                          <button
+                            onClick={() => handleRegenerateCode(professional.id)}
+                            title="Regenerar codigo de acceso"
+                            className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                          </button>
+                        )}
+
+                        {/* Eliminar */}
                         <button
-                          onClick={() => handleReactivateAccess(professional.id)}
-                          className="text-green-600 hover:text-green-900"
+                          onClick={() => openDeleteModal(professional)}
+                          title="Eliminar profesional"
+                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                         >
-                          Reactivar
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
                         </button>
-                      )}
-                      
-                      {professional.status === 'active' && (
-                        <button
-                          onClick={() => handleRegenerateCode(professional.id)}
-                          className="text-yellow-600 hover:text-yellow-900"
-                        >
-                          Regenerar
-                        </button>
-                      )}
-                      
-                      <button
-                        onClick={() => openDeleteModal(professional)}
-                        className="text-red-600 hover:text-red-900 font-medium"
-                        title="Eliminar profesional"
-                      >
-                        Eliminar
-                      </button>
+                      </div>
                     </td>
                   </tr>
                 );

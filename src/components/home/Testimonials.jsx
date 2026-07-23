@@ -1,8 +1,8 @@
 import React from 'react';
 import ScrollReveal from '../common/ScrollReveal';
 
-const Testimonials = () => {
-    const testimonials = [
+const Testimonials = ({ customTestimonials }) => {
+    const defaultTestimonials = [
         {
             name: 'María González',
             role: 'Usuario',
@@ -68,7 +68,9 @@ const Testimonials = () => {
 
                 {/* Testimonials Grid */}
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {testimonials.map((testimonial, index) => (
+                    {(customTestimonials || defaultTestimonials).map((testimonial, index) => {
+                        const defaultTestimonial = defaultTestimonials[index % defaultTestimonials.length];
+                        return (
                         <ScrollReveal
                             key={index}
                             direction={index % 2 === 0 ? "left" : "right"}
@@ -77,7 +79,7 @@ const Testimonials = () => {
                         >
                             {/* Stars */}
                             <div className="flex space-x-1 mb-4">
-                                {[...Array(testimonial.rating)].map((_, i) => (
+                                {[...Array(testimonial.rating || 5)].map((_, i) => (
                                     <svg
                                         key={i}
                                         className="w-5 h-5 text-yellow-400"
@@ -91,25 +93,22 @@ const Testimonials = () => {
 
                             {/* Quote */}
                             <p className="text-gray-700 mb-6 leading-relaxed italic">
-                                "{testimonial.text}"
+                                "{testimonial.text || testimonial.content}"
                             </p>
 
                             {/* Author */}
                             <div className="flex items-center space-x-4">
-                                <div className={`${testimonial.color} w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg`}>
-                                    {testimonial.avatar}
+                                <div className={`${testimonial.color || defaultTestimonial.color} w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg`}>
+                                    {testimonial.avatar || (testimonial.name ? testimonial.name.charAt(0) : defaultTestimonial.avatar)}
                                 </div>
                                 <div>
-                                    <div className="font-semibold text-gray-900">
-                                        {testimonial.name}
-                                    </div>
-                                    <div className="text-sm text-gray-500">
-                                        {testimonial.role}
-                                    </div>
+                                    <h4 className="text-gray-900 font-bold">{testimonial.name}</h4>
+                                    <p className="text-gray-500 text-sm">{testimonial.role}</p>
                                 </div>
                             </div>
                         </ScrollReveal>
-                    ))}
+                        );
+                    })}
                 </div>
 
                 {/* Trust Indicators */}

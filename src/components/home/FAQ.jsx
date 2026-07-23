@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 
-const FAQ = () => {
+const FAQ = ({ customFaqs }) => {
     const [openIndex, setOpenIndex] = useState(null);
 
-    const faqs = [
+    const defaultFaqs = [
         {
             question: '¿Cómo funciona PsicoMatch?',
             answer: 'PsicoMatch utiliza un algoritmo inteligente que analiza tu perfil y necesidades para conectarte con los profesionales más compatibles. Primero completas una evaluación breve, luego recibes recomendaciones personalizadas de profesionales verificados, y finalmente puedes agendar sesiones según tu preferencia.'
@@ -38,6 +38,8 @@ const FAQ = () => {
         }
     ];
 
+    const faqsToDisplay = customFaqs && customFaqs.length > 0 ? customFaqs : defaultFaqs;
+
     const toggleFAQ = (index) => {
         setOpenIndex(openIndex === index ? null : index);
     };
@@ -57,7 +59,7 @@ const FAQ = () => {
 
                 {/* FAQ List */}
                 <div className="max-w-3xl mx-auto">
-                    {faqs.map((faq, index) => (
+                    {faqsToDisplay.map((faq, index) => (
                         <div
                             key={index}
                             className="mb-4 border-2 border-gray-100 rounded-xl overflow-hidden hover:border-primary-200 transition-colors duration-300"
@@ -107,7 +109,7 @@ const FAQ = () => {
                         ¿Tienes Más Preguntas?
                     </h3>
                     <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
-                        Nuestro equipo de soporte está disponible para ayudarte. Contáctanos por email o chat en vivo.
+                        Nuestro equipo de soporte está disponible para ayudarte. Contáctanos por email.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4 justify-center">
                         <a
@@ -119,12 +121,6 @@ const FAQ = () => {
                             </svg>
                             <span>Enviar Email</span>
                         </a>
-                        <button className="inline-flex items-center justify-center space-x-2 border-2 border-primary-600 text-primary-600 px-6 py-3 rounded-lg font-semibold hover:bg-primary-50 transition-colors duration-300">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                            </svg>
-                            <span>Chat en Vivo</span>
-                        </button>
                     </div>
                 </div>
             </div>

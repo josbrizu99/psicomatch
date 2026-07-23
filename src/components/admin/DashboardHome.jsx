@@ -495,10 +495,56 @@ const DashboardHome = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Cargando datos del dashboard...</p>
+      <div className="space-y-6">
+        {/* Header skeleton */}
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="h-7 w-32 bg-gray-200 rounded animate-pulse mb-2" />
+            <div className="h-4 w-56 bg-gray-100 rounded animate-pulse" />
+          </div>
+          <div className="w-28 h-9 bg-gray-200 rounded-lg animate-pulse" />
+        </div>
+        {/* KPI cards skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-gray-100 rounded-full animate-pulse flex-shrink-0" />
+                <div className="ml-4 flex-1 space-y-2">
+                  <div className="h-3 bg-gray-200 rounded animate-pulse w-24" />
+                  <div className="h-6 bg-gray-300 rounded animate-pulse w-16" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        {/* Charts skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {[...Array(2)].map((_, i) => (
+            <div key={i} className="bg-white rounded-xl border border-gray-100 shadow-sm">
+              <div className="px-6 py-4 border-b border-gray-100">
+                <div className="h-5 bg-gray-200 rounded animate-pulse w-40" />
+              </div>
+              <div className="p-6">
+                <div className="h-64 bg-gray-100 rounded-xl animate-pulse" />
+              </div>
+            </div>
+          ))}
+        </div>
+        {/* Tests skeleton */}
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
+          <div className="px-6 py-4 border-b border-gray-100">
+            <div className="h-5 bg-gray-200 rounded animate-pulse w-36" />
+          </div>
+          <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="bg-gray-50 rounded-xl p-4 space-y-2">
+                <div className="h-4 bg-gray-200 rounded animate-pulse w-36" />
+                <div className="h-3 bg-gray-100 rounded animate-pulse w-full" />
+                <div className="h-3 bg-gray-100 rounded animate-pulse w-2/3" />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -536,89 +582,83 @@ const DashboardHome = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <div className="flex items-center space-x-2">
-            <p className="text-gray-600">Resumen general de la aplicación</p>
-            <div className="flex items-center space-x-1">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+          <div className="flex items-center space-x-3 mt-1">
+            <p className="text-sm text-gray-500">Resumen general de la plataforma</p>
+            <div className="flex items-center space-x-1.5">
+              <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
               <span className="text-xs text-green-600 font-medium">Tiempo real</span>
             </div>
           </div>
         </div>
         <div className="flex items-center space-x-3">
           {lastRefresh && (
-            <span className="text-sm text-gray-500">
-              Última actualización: {lastRefresh.toLocaleTimeString()}
+            <span className="text-xs text-gray-400 hidden sm:block">
+              Actualizado: {lastRefresh.toLocaleTimeString()}
             </span>
           )}
-          <div className="flex space-x-2">
-            <button
-              onClick={handleRefresh}
-              className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 shadow-sm"
-            >
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Actualizar
-            </button>
-          </div>
+          <button
+            onClick={handleRefresh}
+            className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-teal-600 rounded-lg hover:bg-teal-700 transition-colors shadow-sm"
+          >
+            <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Actualizar
+          </button>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <div className="p-3 rounded-full bg-blue-100">
-              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Usuarios */}
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex items-center space-x-4">
+          <div className="w-12 h-12 rounded-xl bg-teal-50 flex items-center justify-center flex-shrink-0">
+              <svg className="w-6 h-6 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
               </svg>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Usuarios</p>
-              <p className="text-2xl font-semibold text-gray-900">{memoizedStats.totalUsers}</p>
-            </div>
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Usuarios</p>
+            <p className="text-2xl font-bold text-gray-900 mt-0.5">{memoizedStats.totalUsers}</p>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <div className="p-3 rounded-full bg-green-100">
-              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+        {/* Profesionales */}
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex items-center space-x-4">
+          <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
+              <svg className="w-6 h-6 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Profesionales</p>
-              <p className="text-2xl font-semibold text-gray-900">{memoizedStats.totalProfessionals}</p>
-            </div>
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Profesionales</p>
+            <p className="text-2xl font-bold text-gray-900 mt-0.5">{memoizedStats.totalProfessionals}</p>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <div className="p-3 rounded-full bg-purple-100">
-              <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Tests de Evaluación</p>
-              <p className="text-2xl font-semibold text-gray-900">{memoizedStats.totalTests}</p>
-            </div>
+        {/* Tests */}
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex items-center space-x-4">
+          <div className="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center flex-shrink-0">
+            <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Tests</p>
+            <p className="text-2xl font-bold text-gray-900 mt-0.5">{memoizedStats.totalTests}</p>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <div className="p-3 rounded-full bg-orange-100">
-              <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Resultados</p>
-              <p className="text-2xl font-semibold text-gray-900">{memoizedStats.totalResults}</p>
-            </div>
+        {/* Resultados */}
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex items-center space-x-4">
+          <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
+            <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Resultados</p>
+            <p className="text-2xl font-bold text-gray-900 mt-0.5">{memoizedStats.totalResults}</p>
           </div>
         </div>
       </div>
@@ -626,28 +666,28 @@ const DashboardHome = () => {
       {/* Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Weekly Users Chart */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b border-gray-200">
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
+          <div className="px-6 py-4 border-b border-gray-100">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <h3 className="text-lg font-medium text-gray-900">Registros Semanales</h3>
-                <div className="flex items-center space-x-1">
-                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                <div className="flex items-center space-x-1.5">
+                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
                   <span className="text-xs text-green-600 font-medium">Live</span>
                 </div>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-3">
                 <div className="text-sm text-gray-500">
-                  Últimos 7 días
+                  Ultimos 7 dias
                 </div>
-                <div className="text-xs text-gray-400">
+                <div className="text-xs font-medium text-teal-600 bg-teal-50 px-2.5 py-1 rounded-full">
                   Total: {memoizedWeeklyUsersData.reduce((sum, day) => sum + day.users, 0)} usuarios
                 </div>
                 <button
                   onClick={handleRefresh}
-                  className="inline-flex items-center px-2 py-1 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200"
+                  className="inline-flex items-center px-2.5 py-1.5 border border-gray-200 text-xs font-medium rounded-lg text-gray-600 bg-white hover:bg-gray-50 focus:outline-none transition-colors"
                 >
-                  <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
                   Actualizar
@@ -699,9 +739,8 @@ const DashboardHome = () => {
           </div>
         </div>
 
-        {/* Recent Results */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b border-gray-200">
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
+          <div className="px-6 py-4 border-b border-gray-100">
             <h3 className="text-lg font-medium text-gray-900">Resultados Recientes</h3>
           </div>
           <div className="p-6">
@@ -735,11 +774,10 @@ const DashboardHome = () => {
         </div>
       </div>
 
-      {/* Tests de Evaluación Recientes */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="px-6 py-4 border-b border-gray-200">
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
+        <div className="px-6 py-4 border-b border-gray-100">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-medium text-gray-900">Tests de Evaluación</h3>
+            <h3 className="text-lg font-medium text-gray-900">Tests de Evaluacion</h3>
             <span className="text-sm text-gray-500">
               {memoizedStats.totalTests} tests disponibles
             </span>
@@ -802,11 +840,11 @@ const DashboardHome = () => {
               </div>
               <h4 className="text-lg font-medium text-gray-900 mb-2">No hay tests de evaluación</h4>
               <p className="text-gray-600 mb-4">Crea tu primer test de evaluación para comenzar</p>
-              <button className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              <button className="inline-flex items-center px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors shadow-sm">
+                <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.5v15m7.5-7.5h-15" />
                 </svg>
-                Crear Test de Evaluación
+                Crear Test de Evaluacion
               </button>
             </div>
           )}
@@ -823,8 +861,8 @@ const DashboardHome = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {memoizedTopProfessionals.map((professional, idx) => (
                 <div key={professional.profId || `top-${idx}`} className="text-center">
-                  <div className="w-16 h-16 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <span className="text-white text-lg font-semibold">
+                  <div className="w-16 h-16 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <span className="text-teal-700 text-lg font-semibold">
                       {professional.name?.charAt(0)?.toUpperCase() || 'P'}
                     </span>
                   </div>
@@ -879,8 +917,8 @@ const DashboardHome = () => {
                       }}
                     />
                   ) : null}
-                  <div className={`w-12 h-12 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-full flex items-center justify-center ${selectedUser.photoURL ? 'hidden' : ''}`}>
-                    <span className="text-white text-lg font-semibold">
+                  <div className={`w-12 h-12 bg-teal-100 rounded-full flex items-center justify-center ${selectedUser.photoURL ? 'hidden' : ''}`}>
+                    <span className="text-teal-700 text-lg font-semibold">
                       {selectedUser.name?.charAt(0)?.toUpperCase() || 'U'}
                     </span>
                   </div>

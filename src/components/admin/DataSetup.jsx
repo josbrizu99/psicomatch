@@ -17,10 +17,10 @@ const DataSetup = () => {
       const testQuery = query(collection(db, 'users'), limit(1));
       await getDocs(testQuery);
       setConnectionStatus('connected');
-      setMessage('✅ Conexión a Firestore establecida correctamente');
+      setMessage('Conexion a Firestore establecida correctamente');
     } catch (error) {
       setConnectionStatus('error');
-      setError(`❌ Error de conexión: ${error.message}`);
+      setError(`Error de conexion: ${error.message}`);
     }
   };
 
@@ -33,12 +33,12 @@ const DataSetup = () => {
     try {
       const result = await populateSampleData();
       if (result.success) {
-        setMessage('✅ Datos de ejemplo cargados exitosamente');
+        setMessage('Datos de ejemplo cargados exitosamente');
       } else {
-        setError(`❌ Error al cargar datos: ${result.error}`);
+        setError(`Error al cargar datos: ${result.error}`);
       }
     } catch (error) {
-      setError(`❌ Error inesperado: ${error.message}`);
+      setError(`Error inesperado: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -53,12 +53,12 @@ const DataSetup = () => {
     try {
       const result = await createAdminUser();
       if (result.success) {
-        setMessage('✅ Usuario administrador creado exitosamente');
+        setMessage('Usuario administrador creado exitosamente');
       } else {
-        setError(`❌ Error al crear administrador: ${result.error}`);
+        setError(`Error al crear administrador: ${result.error}`);
       }
     } catch (error) {
-      setError(`❌ Error inesperado: ${error.message}`);
+      setError(`Error inesperado: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -87,9 +87,9 @@ const DataSetup = () => {
         .map(([collection, count]) => `${collection}: ${count}`)
         .join(', ');
 
-      setMessage(`📊 Datos existentes: ${summary}`);
+      setMessage(`Datos existentes: ${summary}`);
     } catch (error) {
-      setError(`❌ Error al verificar datos: ${error.message}`);
+      setError(`Error al verificar datos: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -104,7 +104,7 @@ const DataSetup = () => {
 
       {/* Estado de conexión */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-medium text-gray-900 mb-4">🔗 Estado de Conexión</h2>
+        <h2 className="text-lg font-medium text-gray-900 mb-4">Estado de Conexion</h2>
         
         <div className="flex items-center space-x-4 mb-4">
           <div className={`w-3 h-3 rounded-full ${
@@ -121,13 +121,13 @@ const DataSetup = () => {
           onClick={checkConnection}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
-          🔄 Verificar Conexión
+          Verificar Conexion
         </button>
       </div>
 
       {/* Verificar datos existentes */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-medium text-gray-900 mb-4">📊 Verificar Datos Existentes</h2>
+        <h2 className="text-lg font-medium text-gray-900 mb-4">Verificar Datos Existentes</h2>
         <p className="text-sm text-gray-600 mb-4">
           Revisa qué datos ya existen en las colecciones de Firestore
         </p>
@@ -137,13 +137,13 @@ const DataSetup = () => {
           disabled={loading}
           className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors disabled:bg-gray-400"
         >
-          🔍 Verificar Datos
+          Verificar Datos
         </button>
       </div>
 
       {/* Poblar datos de ejemplo */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-medium text-gray-900 mb-4">📝 Poblar Datos de Ejemplo</h2>
+        <h2 className="text-lg font-medium text-gray-900 mb-4">Poblar Datos de Ejemplo</h2>
         <p className="text-sm text-gray-600 mb-4">
           Carga datos de ejemplo para probar la aplicación. Esto incluye:
         </p>
@@ -159,13 +159,13 @@ const DataSetup = () => {
           disabled={loading || connectionStatus !== 'connected'}
           className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-400"
         >
-          {loading ? '🔄 Cargando...' : '📝 Cargar Datos de Ejemplo'}
+          {loading ? 'Cargando...' : 'Cargar Datos de Ejemplo'}
         </button>
       </div>
 
       {/* Crear usuario administrador */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-medium text-gray-900 mb-4">👤 Crear Usuario Administrador</h2>
+        <h2 className="text-lg font-medium text-gray-900 mb-4">Crear Usuario Administrador</h2>
         <p className="text-sm text-gray-600 mb-4">
           Crea un usuario administrador con las siguientes credenciales:
         </p>
@@ -180,7 +180,7 @@ const DataSetup = () => {
           disabled={loading || connectionStatus !== 'connected'}
           className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:bg-gray-400"
         >
-          {loading ? '🔄 Creando...' : '👤 Crear Administrador'}
+          {loading ? 'Creando...' : 'Crear Administrador'}
         </button>
       </div>
 
@@ -217,7 +217,7 @@ const DataSetup = () => {
 
       {/* Información adicional */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h3 className="text-lg font-medium text-blue-900 mb-2">💡 Información Importante</h3>
+        <h3 className="text-lg font-medium text-blue-900 mb-2">Informacion Importante</h3>
         <ul className="text-sm text-blue-800 space-y-1">
           <li>• Asegúrate de que las reglas de Firestore permitan lectura y escritura</li>
           <li>• Verifica que las colecciones estén creadas en Firebase Console</li>

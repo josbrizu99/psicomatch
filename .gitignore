@@ -6,6 +6,12 @@
 # Testing
 /coverage
 /__tests__/coverage
+# Reportes de pruebas automatizadas (generados, no versionar)
+/tests/reports/playwright-html/
+/tests/reports/playwright-results/
+/tests/reports/lighthouse/
+/playwright-report/
+/test-results/
 
 # Producción
 /build
@@ -89,3 +95,8 @@ SECURITY_GUIDE.md
 # package-lock.json
 public/__/firebase/init.json
 VERIFICAR_FIREBASE_CONSOLE.md
+
+# Agent Directories
+.gemini/
+brain/
+.agents/

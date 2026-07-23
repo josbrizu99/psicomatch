@@ -32,7 +32,7 @@ const ManageProfessionals = () => {
         ...doc.data()
       }));
       
-      console.log('🔄 Profesionales cargados:', professionalsData.map(p => ({
+      console.log('Profesionales cargados:', professionalsData.map(p => ({
         name: p.name,
         email: p.email,
         totalSessions: p.totalSessions,
@@ -299,58 +299,72 @@ const ManageProfessionals = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-white shadow rounded-lg p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">Gestión de Profesionales</h2>
-            <p className="text-gray-600">Verifica y gestiona las cuentas de profesionales registrados</p>
-          </div>
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={loadProfessionals}
-              disabled={loadingProfessionals}
-              className="px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-md hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
-            >
-              {loadingProfessionals ? 'Actualizando...' : 'Actualizar'}
-            </button>
-            <div className="text-sm text-gray-500">
-              Total: {professionals.length} profesionales
-            </div>
-          </div>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Gestion de Profesionales</h1>
+          <p className="text-gray-500 text-sm mt-1">Verifica y gestiona las cuentas de profesionales registrados</p>
+        </div>
+        <div className="flex items-center space-x-3">
+          <span className="text-sm text-gray-400">{professionals.length} registros</span>
+          <button
+            onClick={loadProfessionals}
+            disabled={loadingProfessionals}
+            className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-teal-600 rounded-lg hover:bg-teal-700 transition-colors shadow-sm disabled:opacity-50"
+          >
+            <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            {loadingProfessionals ? 'Actualizando...' : 'Actualizar'}
+          </button>
         </div>
       </div>
 
-      {/* Filtros y búsqueda */}
-      <div className="bg-white shadow rounded-lg p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Buscar profesional
-            </label>
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Nombre, email o código profesional..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Filtrar por estado
-            </label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="all">Todos</option>
-              <option value="pending">Pendientes</option>
-              <option value="active">Activos</option>
-              <option value="inactive">Inactivos</option>
-              <option value="rejected">Rechazados</option>
-            </select>
+      {/* Filtros y busqueda */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        {/* Search bar sofisticado */}
+        <div className="relative flex-1">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
           </div>
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Buscar por nombre, email o codigo profesional..."
+            className="w-full pl-10 pr-10 py-2.5 text-sm text-gray-900 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white shadow-sm"
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm('')}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+
+        {/* Filtro por estado */}
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+            </svg>
+          </div>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="pl-10 pr-8 py-2.5 text-sm text-gray-900 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white shadow-sm appearance-none cursor-pointer"
+          >
+            <option value="all">Todos los estados</option>
+            <option value="pending">Pendientes</option>
+            <option value="active">Activos</option>
+            <option value="inactive">Inactivos</option>
+            <option value="rejected">Rechazados</option>
+          </select>
         </div>
       </div>
 
@@ -368,11 +382,23 @@ const ManageProfessionals = () => {
       )}
 
       {/* Lista de profesionales */}
-      <div className="bg-white shadow rounded-lg overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
         {loadingProfessionals ? (
-          <div className="p-6 text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
-            <p className="mt-2 text-gray-600">Cargando profesionales...</p>
+          <div className="divide-y divide-gray-50">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="px-6 py-4 flex items-center space-x-4">
+                <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse flex-shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-gray-200 rounded animate-pulse w-40" />
+                  <div className="h-3 bg-gray-100 rounded animate-pulse w-56" />
+                </div>
+                <div className="w-16 h-6 bg-gray-100 rounded-full animate-pulse" />
+                <div className="w-24 h-5 bg-gray-100 rounded animate-pulse" />
+                <div className="flex space-x-1">
+                  {[...Array(3)].map((_, j) => <div key={j} className="w-8 h-8 bg-gray-100 rounded-lg animate-pulse" />)}
+                </div>
+              </div>
+            ))}
           </div>
         ) : filteredProfessionals.length === 0 ? (
           <div className="p-6 text-center text-gray-500">
