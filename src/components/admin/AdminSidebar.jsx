@@ -1,6 +1,6 @@
 import React from 'react';
 
-const AdminSidebar = ({ activeSection, onSectionChange }) => {
+const AdminSidebar = ({ activeSection, onSectionChange, isOpen, onClose }) => {
   const menuItems = [
     {
       id: 'dashboard',
@@ -77,33 +77,68 @@ const AdminSidebar = ({ activeSection, onSectionChange }) => {
     },
   ];
 
-  return (
-    <aside className="w-64 bg-white shadow-sm border-r border-gray-100 min-h-screen flex flex-col">
-      <nav className="flex-1 mt-6">
-        <div className="px-3 space-y-1">
-          {menuItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => onSectionChange(item.id)}
-              className={`w-full flex items-center space-x-3 px-4 py-2.5 text-left rounded-lg transition-all duration-150 ${
-                activeSection === item.id
-                  ? 'bg-teal-600 text-white shadow-sm'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-teal-700'
-              }`}
-            >
-              <span className={`flex-shrink-0 ${activeSection === item.id ? 'text-white' : 'text-gray-400'}`}>
-                {item.icon}
-              </span>
-              <span className="font-medium text-sm">{item.label}</span>
-            </button>
-          ))}
-        </div>
-      </nav>
+  const handleItemClick = (itemId) => {
+    onSectionChange(itemId);
+    // Cerrar sidebar en móvil al seleccionar
+    if (onClose) onClose();
+  };
 
-      <div className="p-4 border-t border-gray-100">
-        <p className="text-xs text-gray-400 text-center">v1.0.0</p>
-      </div>
-    </aside>
+  return (
+    <>
+      {/* Overlay para cerrar en móvil */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden transition-opacity"
+          onClick={onClose}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside className={`
+        fixed top-0 left-0 h-full bg-white shadow-lg border-r border-gray-100 z-50
+        w-64 transition-transform duration-300 ease-in-out
+        md:relative md:translate-x-0 md:z-10 md:shadow-sm
+        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}>
+        {/* Botón cerrar solo en móvil */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-100 md:hidden">
+          <span className="text-sm font-semibold text-gray-700">Menú</span>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <nav className="flex-1 mt-4 md:mt-6">
+          <div className="px-3 space-y-1">
+            {menuItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => handleItemClick(item.id)}
+                className={`w-full flex items-center space-x-3 px-4 py-2.5 text-left rounded-lg transition-all duration-150 ${
+                  activeSection === item.id
+                    ? 'bg-teal-600 text-white shadow-sm'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-teal-700'
+                }`}
+              >
+                <span className={`flex-shrink-0 ${activeSection === item.id ? 'text-white' : 'text-gray-400'}`}>
+                  {item.icon}
+                </span>
+                <span className="font-medium text-sm">{item.label}</span>
+              </button>
+            ))}
+          </div>
+        </nav>
+
+        <div className="p-4 border-t border-gray-100">
+          <p className="text-xs text-gray-400 text-center">v1.0.0</p>
+        </div>
+      </aside>
+    </>
   );
 };
 

@@ -45,21 +45,6 @@ const ChatContainer = ({ userId, userType = 'user', initialConversationId = null
                 } flex-1 flex flex-col`}>
                 {selectedConversation ? (
                     <>
-                        {/* Mobile Back Button */}
-                        <div className="md:hidden p-4 border-b border-gray-200 flex items-center space-x-3">
-                            <button
-                                onClick={() => setSelectedConversation(null)}
-                                className="text-gray-600 hover:text-gray-900"
-                            >
-                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                                </svg>
-                            </button>
-                            <h3 className="text-lg font-semibold text-gray-900">
-                                {selectedConversation.professionalName || selectedConversation.userName || 'Chat'}
-                            </h3>
-                        </div>
-
                         {/* Chat Window */}
                         <ChatWindow
                             conversationId={selectedConversation.id}
@@ -67,6 +52,9 @@ const ChatContainer = ({ userId, userType = 'user', initialConversationId = null
                             userType={userType}
                             recipientId={selectedConversation.participants?.find(id => id !== userId) ||
                                 (userType === 'user' ? selectedConversation.professionalId : selectedConversation.userId)}
+                            otherUserName={selectedConversation.professionalName || selectedConversation.userName || 'Usuario'}
+                            otherUserPhoto={selectedConversation.professionalPhoto || selectedConversation.userPhoto}
+                            onClose={() => setSelectedConversation(null)}
                         />
                     </>
                 ) : (

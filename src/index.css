@@ -552,3 +552,9 @@ html {
   100% {transform: translate(0,0)}
 }
 
+/* Soporte para áreas seguras de notch/dispositivos móviles */
+.safe-area-pb {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+

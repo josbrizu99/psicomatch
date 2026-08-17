@@ -29,7 +29,7 @@ const ManageUsers = () => {
       const usersData = usersSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      }));
+      })).filter(user => user.role !== 'admin'); // No incluir administradores en esta vista
 
       setUsers(usersData);
     } catch (error) {
@@ -285,7 +285,6 @@ const ManageUsers = () => {
           className="px-3 py-2.5 text-sm text-gray-900 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white shadow-sm"
         >
           <option value="all">Todos los roles</option>
-          <option value="admin">Administradores</option>
           <option value="user">Usuarios</option>
         </select>
         <select

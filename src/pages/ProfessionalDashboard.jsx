@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { useProfessionalAuth } from '../contexts/ProfessionalAuthContext';
 import { updateProfile } from 'firebase/auth';
 import { auth } from '../firebase/firebase';
-import { logoutProfessional } from '../services/professionalAuthService';
+import { logoutProfessional, updateProfessionalData } from '../services/professionalAuthService';
 import { listenProfessionalSessions, updateSessionProgress, completeSessionByProfessional, updateUserCareStatus, createUserSession, saveSessionProgress, sendMeetingDetails } from '../services/userSessionsService';
 import { doc, getDoc, updateDoc, serverTimestamp, collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/firebase';
@@ -24,6 +24,40 @@ import PageLoader from '../components/common/PageLoader';
 import { useConversations } from '../hooks/useChat';
 
 const ProfessionalDashboard = () => {
+  const [activeTab, setActiveTab] = useState('inicio');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('name');
+  const [availability, setAvailability] = useState({
+    isAvailable: true,
+    timezone: 'America/Asuncion',
+    schedule: {
+      monday: { isAvailable: true, slots: [{ startTime: '09:00', endTime: '12:00' }, { startTime: '14:00', endTime: '18:00' }] },
+      tuesday: { isAvailable: true, slots: [{ startTime: '09:00', endTime: '12:00' }, { startTime: '14:00', endTime: '18:00' }] },
+      wednesday: { isAvailable: true, slots: [{ startTime: '09:00', endTime: '12:00' }, { startTime: '14:00', endTime: '18:00' }] },
+      thursday: { isAvailable: true, slots: [{ startTime: '09:00', endTime: '12:00' }, { startTime: '14:00', endTime: '18:00' }] },
+      friday: { isAvailable: true, slots: [{ startTime: '09:00', endTime: '12:00' }, { startTime: '14:00', endTime: '18:00' }] },
+      saturday: { isAvailable: false, slots: [] },
+      sunday: { isAvailable: false, slots: [] }
+    },
+    sessionSettings: {
+      duration: 60,
+      breakBetweenSessions: 15,
+      maxSessionsPerDay: 8,
+      advanceBookingDays: 30,
+      cancellationHours: 24
+    },
+    exceptions: [],
+    modalities: {
+      inPerson: true,
+      online: true,
+      hybrid: false
+    }
+  });
+  const [newExceptionDate, setNewExceptionDate] = useState('');
+  const [newExceptionReason, setNewExceptionReason] = useState('');
+  const [savingAvailability, setSavingAvailability] = useState(false);
+
   const [stats, setStats] = useState({
     totalSessions: 0,
     totalPatients: 0,
@@ -149,6 +183,17 @@ const ProfessionalDashboard = () => {
         averageRating: professionalData.rating || 0,
         ratingCount: professionalData.ratingCount || 0
       });
+    }
+  }, [professionalData]);
+
+  // Cargar disponibilidad si ya está configurada
+  useEffect(() => {
+    if (professionalData && professionalData.availability) {
+      // Hacer merge para asegurar que no falten campos nuevos
+      setAvailability(prev => ({
+        ...prev,
+        ...professionalData.availability
+      }));
     }
   }, [professionalData]);
 
@@ -1037,6 +1082,137 @@ const ProfessionalDashboard = () => {
     setShowSettingsModal(true);
   };
 
+  const handleToggleDay = (dayKey) => {
+    setAvailability(prev => ({
+      ...prev,
+      schedule: {
+        ...prev.schedule,
+        [dayKey]: {
+          ...prev.schedule[dayKey],
+          isAvailable: !prev.schedule[dayKey].isAvailable
+        }
+      }
+    }));
+  };
+
+  const addHoursToTime = (timeStr, hours) => {
+    if (!timeStr) return "10:00";
+    const [h, m] = timeStr.split(':').map(Number);
+    const newH = (h + hours) % 24;
+    return `${newH.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+  };
+
+  const handleAddSlot = (dayKey) => {
+    setAvailability(prev => {
+      const currentSlots = prev.schedule[dayKey].slots || [];
+      const lastSlot = currentSlots[currentSlots.length - 1];
+      const newStart = lastSlot ? lastSlot.endTime : "09:00";
+      const newEnd = lastSlot ? addHoursToTime(lastSlot.endTime, 1) : "10:00";
+      
+      return {
+        ...prev,
+        schedule: {
+          ...prev.schedule,
+          [dayKey]: {
+            ...prev.schedule[dayKey],
+            slots: [...currentSlots, { startTime: newStart, endTime: newEnd, isAvailable: true }]
+          }
+        }
+      };
+    });
+  };
+
+  const handleUpdateSlot = (dayKey, index, field, value) => {
+    setAvailability(prev => {
+      const updatedSlots = [...(prev.schedule[dayKey].slots || [])];
+      updatedSlots[index] = {
+        ...updatedSlots[index],
+        [field]: value
+      };
+      return {
+        ...prev,
+        schedule: {
+          ...prev.schedule,
+          [dayKey]: {
+            ...prev.schedule[dayKey],
+            slots: updatedSlots
+          }
+        }
+      };
+    });
+  };
+
+  const handleDeleteSlot = (dayKey, index) => {
+    setAvailability(prev => {
+      const updatedSlots = (prev.schedule[dayKey].slots || []).filter((_, i) => i !== index);
+      return {
+        ...prev,
+        schedule: {
+          ...prev.schedule,
+          [dayKey]: {
+            ...prev.schedule[dayKey],
+            slots: updatedSlots
+          }
+        }
+      };
+    });
+  };
+
+  const handleAddException = () => {
+    if (!newExceptionDate) {
+      toast.error('Por favor selecciona una fecha');
+      return;
+    }
+    setAvailability(prev => ({
+      ...prev,
+      exceptions: [...(prev.exceptions || []), { date: newExceptionDate, reason: newExceptionReason || 'Vacaciones/Feriado', isAvailable: false }]
+    }));
+    setNewExceptionDate('');
+    setNewExceptionReason('');
+    toast.success('Excepción añadida');
+  };
+
+  const handleDeleteException = (index) => {
+    setAvailability(prev => ({
+      ...prev,
+      exceptions: (prev.exceptions || []).filter((_, i) => i !== index)
+    }));
+    toast.success('Excepción eliminada');
+  };
+
+  const handleSaveAvailability = async () => {
+    const profDocId = professionalData?.id || professionalData?.uid || professionalData?.profId;
+    if (!profDocId) {
+      toast.error('No se pudo identificar tu cuenta de profesional');
+      return;
+    }
+
+    try {
+      setSavingAvailability(true);
+      const result = await updateProfessionalData(profDocId, { availability });
+      if (result.success) {
+        toast.success('Disponibilidad y configuración de agenda guardadas exitosamente');
+      } else {
+        toast.error(`Error al guardar agenda: ${result.error}`);
+      }
+    } catch (err) {
+      console.error('Error saving availability:', err);
+      toast.error('Error al guardar la agenda');
+    } finally {
+      setSavingAvailability(false);
+    }
+  };
+
+  const daysOfWeek = [
+    { key: 'monday', label: 'Lunes' },
+    { key: 'tuesday', label: 'Martes' },
+    { key: 'wednesday', label: 'Miércoles' },
+    { key: 'thursday', label: 'Jueves' },
+    { key: 'friday', label: 'Viernes' },
+    { key: 'saturday', label: 'Sábado' },
+    { key: 'sunday', label: 'Domingo' }
+  ];
+
   // Especialidades disponibles (mismas que en el registro)
   const availableSpecialities = [
     'Ansiedad (Cognitivo-Conductual)',
@@ -1196,10 +1372,10 @@ const ProfessionalDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pt-20">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="flex items-center justify-between px-6 py-4">
+      <header className="bg-white shadow-sm border-b border-gray-200 fixed top-0 left-0 right-0 z-40 h-20">
+        <div className="flex items-center justify-between px-6 h-full">
           <div className="flex items-center space-x-4">
             <Link
               to="/"
@@ -1419,86 +1595,121 @@ const ProfessionalDashboard = () => {
           </button>
 
           {/* Contenido del Sidebar */}
-          <div className="p-4 flex-1 overflow-y-auto">
+          <div className={`p-4 flex-1 overflow-y-auto ${sidebarCollapsed ? 'pt-12' : ''}`}>
             {!sidebarCollapsed && (
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Acciones Rápidas</h3>
+              <h3 className="text-sm font-bold text-teal-800 uppercase tracking-wider mb-4">Panel</h3>
             )}
 
-            <div className="space-y-2">
-              {/* Nueva Sesión */}
+            <div className="space-y-3">
+              {/* Inicio */}
               <button
-                onClick={handleNewSession}
-                className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-3'} p-3 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-all group`}
-                title="Nueva Sesión"
+                onClick={() => setActiveTab('inicio')}
+                className={sidebarCollapsed 
+                  ? `w-12 h-12 flex items-center justify-center rounded-xl mx-auto transition-all duration-150 ${activeTab === 'inicio' ? 'bg-teal-600 text-white shadow-md' : 'text-teal-600 hover:bg-teal-50'}`
+                  : `w-full flex items-center space-x-3 p-3 rounded-xl transition-all duration-150 ${activeTab === 'inicio' ? 'bg-teal-600 text-white shadow-sm' : 'border border-gray-100 hover:bg-teal-50'}`
+                }
+                title="Inicio"
               >
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-blue-200">
-                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                {sidebarCollapsed ? (
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                   </svg>
-                </div>
-                {!sidebarCollapsed && (
-                  <div className="text-left flex-1">
-                    <p className="text-sm font-medium text-gray-900">Nueva Sesión</p>
-                    <p className="text-xs text-gray-600">Programar sesión</p>
-                  </div>
-                )}
-              </button>
-
-              {/* Ver Reportes */}
-              <button
-                onClick={handleViewReports}
-                className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-3'} p-3 border border-gray-200 rounded-lg hover:bg-green-50 hover:border-green-300 transition-all group`}
-                title="Ver Reportes"
-              >
-                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-green-200">
-                  <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                </div>
-                {!sidebarCollapsed && (
-                  <div className="text-left flex-1">
-                    <p className="text-sm font-medium text-gray-900">Ver Reportes</p>
-                    <p className="text-xs text-gray-600">Estadísticas y análisis</p>
-                  </div>
+                ) : (
+                  <>
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${activeTab === 'inicio' ? 'bg-teal-700' : 'bg-teal-100/50'}`}>
+                      <svg className={`w-5 h-5 ${activeTab === 'inicio' ? 'text-white' : 'text-teal-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                      </svg>
+                    </div>
+                    <div className="text-left flex-1">
+                      <p className={`text-sm font-semibold ${activeTab === 'inicio' ? 'text-white' : 'text-gray-900'}`}>Inicio</p>
+                      <p className={`text-xs ${activeTab === 'inicio' ? 'text-teal-100' : 'text-gray-500'}`}>Vista general</p>
+                    </div>
+                  </>
                 )}
               </button>
 
               {/* Mis Pacientes */}
               <button
-                onClick={handleViewPatients}
-                className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-3'} p-3 border border-gray-200 rounded-lg hover:bg-purple-50 hover:border-purple-300 transition-all group`}
+                onClick={() => setActiveTab('pacientes')}
+                className={sidebarCollapsed 
+                  ? `w-12 h-12 flex items-center justify-center rounded-xl mx-auto transition-all duration-150 ${activeTab === 'pacientes' ? 'bg-teal-600 text-white shadow-md' : 'text-teal-600 hover:bg-teal-50'}`
+                  : `w-full flex items-center space-x-3 p-3 rounded-xl transition-all duration-150 ${activeTab === 'pacientes' ? 'bg-teal-600 text-white shadow-sm' : 'border border-gray-100 hover:bg-teal-50'}`
+                }
                 title="Mis Pacientes"
               >
-                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-purple-200">
-                  <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                {sidebarCollapsed ? (
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
-                </div>
-                {!sidebarCollapsed && (
-                  <div className="text-left flex-1">
-                    <p className="text-sm font-medium text-gray-900">Mis Pacientes</p>
-                    <p className="text-xs text-gray-600">Gestionar pacientes</p>
-                  </div>
+                ) : (
+                  <>
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${activeTab === 'pacientes' ? 'bg-teal-700' : 'bg-teal-100/50'}`}>
+                      <svg className={`w-5 h-5 ${activeTab === 'pacientes' ? 'text-white' : 'text-teal-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                      </svg>
+                    </div>
+                    <div className="text-left flex-1">
+                      <p className={`text-sm font-semibold ${activeTab === 'pacientes' ? 'text-white' : 'text-gray-900'}`}>Pacientes</p>
+                      <p className={`text-xs ${activeTab === 'pacientes' ? 'text-teal-100' : 'text-gray-500'}`}>Buscar y gestionar</p>
+                    </div>
+                  </>
                 )}
               </button>
 
-              {/* Configuración */}
+              {/* Disponibilidad */}
               <button
-                onClick={handleSettings}
-                className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-3'} p-3 border border-gray-200 rounded-lg hover:bg-orange-50 hover:border-orange-300 transition-all group`}
-                title="Configuración"
+                onClick={() => setActiveTab('horarios')}
+                className={sidebarCollapsed 
+                  ? `w-12 h-12 flex items-center justify-center rounded-xl mx-auto transition-all duration-150 ${activeTab === 'horarios' ? 'bg-teal-600 text-white shadow-md' : 'text-teal-600 hover:bg-teal-50'}`
+                  : `w-full flex items-center space-x-3 p-3 rounded-xl transition-all duration-150 ${activeTab === 'horarios' ? 'bg-teal-600 text-white shadow-sm' : 'border border-gray-100 hover:bg-teal-50'}`
+                }
+                title="Disponibilidad"
               >
-                <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-orange-200">
-                  <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                {sidebarCollapsed ? (
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a4 4 0 118 0v4m-4 6v6m-4-6h8m-8 6h8" />
                   </svg>
-                </div>
-                {!sidebarCollapsed && (
-                  <div className="text-left flex-1">
-                    <p className="text-sm font-medium text-gray-900">Configuración</p>
-                    <p className="text-xs text-gray-600">Ajustes de cuenta</p>
-                  </div>
+                ) : (
+                  <>
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${activeTab === 'horarios' ? 'bg-teal-700' : 'bg-teal-100/50'}`}>
+                      <svg className={`w-5 h-5 ${activeTab === 'horarios' ? 'text-white' : 'text-teal-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a4 4 0 118 0v4m-4 6v6m-4-6h8m-8 6h8" />
+                      </svg>
+                    </div>
+                    <div className="text-left flex-1">
+                      <p className={`text-sm font-semibold ${activeTab === 'horarios' ? 'text-white' : 'text-gray-900'}`}>Agenda</p>
+                      <p className={`text-xs ${activeTab === 'horarios' ? 'text-teal-100' : 'text-gray-500'}`}>Horarios y festivos</p>
+                    </div>
+                  </>
+                )}
+              </button>
+
+              {/* Reportes */}
+              <button
+                onClick={() => setActiveTab('reportes')}
+                className={sidebarCollapsed 
+                  ? `w-12 h-12 flex items-center justify-center rounded-xl mx-auto transition-all duration-150 ${activeTab === 'reportes' ? 'bg-teal-600 text-white shadow-md' : 'text-teal-600 hover:bg-teal-50'}`
+                  : `w-full flex items-center space-x-3 p-3 rounded-xl transition-all duration-150 ${activeTab === 'reportes' ? 'bg-teal-600 text-white shadow-sm' : 'border border-gray-100 hover:bg-teal-50'}`
+                }
+                title="Reportes"
+              >
+                {sidebarCollapsed ? (
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                ) : (
+                  <>
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${activeTab === 'reportes' ? 'bg-teal-700' : 'bg-teal-100/50'}`}>
+                      <svg className={`w-5 h-5 ${activeTab === 'reportes' ? 'text-white' : 'text-teal-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                    </div>
+                    <div className="text-left flex-1">
+                      <p className={`text-sm font-semibold ${activeTab === 'reportes' ? 'text-white' : 'text-gray-900'}`}>Reportes</p>
+                      <p className={`text-xs ${activeTab === 'reportes' ? 'text-teal-100' : 'text-gray-500'}`}>Estadísticas visuales</p>
+                    </div>
+                  </>
                 )}
               </button>
             </div>
@@ -1513,442 +1724,720 @@ const ProfessionalDashboard = () => {
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
                 Bienvenido, {professionalData?.fullName || professionalData?.name || professionalData?.email || 'Profesional'}
               </h1>
-              <p className="text-gray-600">
-                Última actividad: {professionalData?.lastActivityAt ? formatDate(professionalData.lastActivityAt.toDate()) : 'N/A'}
-              </p>
             </div>
-
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center">
-                  <div className="p-3 rounded-full bg-blue-100">
-                    <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a4 4 0 118 0v4m-4 6v6m-4-6h8m-8 6h8" />
+            {/* ════════════════ INICIO / DASHBOARD ════════════════ */}
+            {activeTab === 'inicio' && (
+              <div className="space-y-6 animate-fade-in">
+                {/* Welcome Banner */}
+                <div className="bg-gradient-to-r from-teal-600 to-teal-800 rounded-2xl p-6 text-white shadow-md relative overflow-hidden">
+                  <div className="absolute right-0 bottom-0 opacity-10 translate-y-4">
+                    <svg className="w-48 h-48" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z" clipRule="evenodd" />
                     </svg>
                   </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Sesiones Totales</p>
-                    <p className="text-2xl font-semibold text-gray-900">{stats.totalSessions}</p>
+                  <div className="relative z-10">
+                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2">
+                      ¡Bienvenido de nuevo, {professionalData?.fullName || professionalData?.name || 'Profesional'}!
+                    </h1>
+                    <p className="text-teal-100 text-sm md:text-base">
+                      Aquí tienes un resumen de la actividad de hoy en Psicomatch.
+                    </p>
                   </div>
                 </div>
-              </div>
 
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center">
-                  <div className="p-3 rounded-full bg-green-100">
-                    <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-                    </svg>
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Pacientes</p>
-                    <p className="text-2xl font-semibold text-gray-900">{stats.totalPatients}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center">
-                  <div className="p-3 rounded-full bg-yellow-100">
-                    <svg className="w-6 h-6 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Calificación</p>
-                    <p className="text-2xl font-semibold text-gray-900">{stats.averageRating}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center">
-                  <div className="p-3 rounded-full bg-purple-100">
-                    <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Reseñas</p>
-                    <p className="text-2xl font-semibold text-gray-900">{stats.ratingCount}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Pacientes asignados */}
-            <div id="patients-section" className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Pacientes asignados</h2>
-                <span className="text-sm text-gray-500">{patients.length} pacientes</span>
-              </div>
-              {patients.length === 0 ? (
-                <p className="text-gray-500">Aún no tienes pacientes asignados.</p>
-              ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {patients.map((patient) => {
-                    const sessionStats = getPatientSessionStats(patient.id);
-                    return (
-                      <div key={patient.id} className="border border-gray-200 rounded-lg p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex-1">
-                            <p className="text-sm font-semibold text-gray-900">{patient.name || patient.email}</p>
-                            <p className="text-xs text-gray-500">{patient.email}</p>
-                          </div>
-                          <span className={`px-2 py-1 text-xs rounded-full ${patient.careStatus === 'alta'
-                            ? 'bg-green-100 text-green-700'
-                            : patient.careStatus === 'en_progreso'
-                              ? 'bg-blue-100 text-blue-700'
-                              : 'bg-yellow-100 text-yellow-700'
-                            }`}>
-                            {patient.careStatus || 'pendiente'}
-                          </span>
-                        </div>
-
-                        {/* Estadísticas de sesiones */}
-                        <div className="grid grid-cols-3 gap-2 mb-3 pb-3 border-b border-gray-200">
-                          <div className="text-center">
-                            <p className="text-xs text-gray-500">Total</p>
-                            <p className="text-sm font-semibold text-gray-900">{sessionStats.total}</p>
-                          </div>
-                          <div className="text-center">
-                            <p className="text-xs text-gray-500">Activas</p>
-                            <p className="text-sm font-semibold text-blue-600">{sessionStats.active}</p>
-                          </div>
-                          <div className="text-center">
-                            <p className="text-xs text-gray-500">Completadas</p>
-                            <p className="text-sm font-semibold text-green-600">{sessionStats.completed}</p>
-                          </div>
-                        </div>
-
-                        {sessionStats.lastSession && (
-                          <div className="text-xs text-gray-500 mb-2">
-                            Última sesión: {formatRelativeTime(sessionStats.lastSession.updatedAt || sessionStats.lastSession.createdAt)}
-                          </div>
-                        )}
-
-                        {/* Estimación de sesiones y progreso */}
-                        <div className="mb-3 p-2 bg-gray-50 rounded-md">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-medium text-gray-700">Sesiones:</span>
-                            <span className="text-xs text-gray-600">
-                              {sessionStats.completed} / {estimatedSessions[patient.id] || 'N/A'} completadas
-                            </span>
-                          </div>
-                          {estimatedSessions[patient.id] && (
-                            <div className="w-full bg-gray-200 rounded-full h-2 mb-1">
-                              <div
-                                className="bg-blue-600 h-2 rounded-full transition-all"
-                                style={{
-                                  width: `${Math.min(100, Math.round((sessionStats.completed / estimatedSessions[patient.id]) * 100))}%`
-                                }}
-                              ></div>
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex space-x-2 mt-2">
-                          <button
-                            onClick={() => handleStartChatWithPatient(patient.id)}
-                            className="flex-1 px-2 py-1 bg-primary-600 text-white rounded text-xs hover:bg-primary-700 flex items-center justify-center space-x-1"
-                          >
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                            </svg>
-                            <span>Chat</span>
-                          </button>
-                          <button
-                            onClick={() => {
-                              setSelectedPatientForEstimate(patient);
-                              setNewEstimatedSessions(estimatedSessions[patient.id] || '');
-                              setShowSessionEstimateModal(true);
-                            }}
-                            className="flex-1 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
-                          >
-                            {estimatedSessions[patient.id] ? 'Editar Estimación' : 'Estimar Sesiones'}
-                          </button>
-                          {estimatedSessions[patient.id] && (
-                            <button
-                              onClick={() => {
-                                setSelectedPatientForEstimate(patient);
-                                setSessionsToAdd('');
-                                setShowAddSessionsModal(true);
-                              }}
-                              className="flex-1 px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600"
-                            >
-                              Agregar Sesiones
-                            </button>
-                          )}
-                        </div>
-
-                        {/* Progreso del paciente - Sesiones completadas */}
-                        <div className="mb-3 p-2 bg-green-50 border border-green-200 rounded-md">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-gray-700">Progreso del Paciente:</span>
-                            <span className="text-sm font-semibold text-green-700">
-                              {sessionStats.completed} sesión{sessionStats.completed !== 1 ? 'es' : ''} completada{sessionStats.completed !== 1 ? 's' : ''}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="text-sm text-gray-700 mb-2">
-                          <p className="font-medium">Notas de Seguimiento:</p>
-                          <p className="text-gray-600">{patient.careProgress || 'Sin notas registradas'}</p>
-                        </div>
-
-                        <label className="block text-xs text-gray-500 mb-1">Actualizar notas de seguimiento</label>
-                        <textarea
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-2"
-                          rows={2}
-                          value={patientProgress[patient.id] || ''}
-                          onChange={(e) => setPatientProgress(prev => ({ ...prev, [patient.id]: e.target.value }))}
-                          placeholder="Notas breves de seguimiento"
-                        />
-                        <div className="mb-2">
-                          <button
-                            onClick={() => handleViewSessionHistory(patient)}
-                            className="w-full px-3 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 transition-colors"
-                          >
-                            📋 Ver Historial Completo de Sesiones
-                          </button>
-                        </div>
-                        <div className="flex items-center justify-between space-x-2">
-                          <button
-                            onClick={() => handleSavePatientProgress(patient.id)}
-                            disabled={patientUpdating === patient.id}
-                            className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50"
-                          >
-                            {patientUpdating === patient.id ? 'Guardando...' : 'Guardar progreso'}
-                          </button>
-                          <button
-                            onClick={() => handleDischargePatient(patient.id)}
-                            disabled={patientUpdating === patient.id}
-                            className="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 disabled:opacity-50"
-                          >
-                            {patientUpdating === patient.id ? 'Procesando...' : 'Dar alta'}
-                          </button>
-                        </div>
-                        <label className="block text-xs text-gray-500 mt-2 mb-1">Nota de alta (opcional)</label>
-                        <textarea
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
-                          rows={2}
-                          value={dischargeNotes[patient.id] || ''}
-                          onChange={(e) => setDischargeNotes(prev => ({ ...prev, [patient.id]: e.target.value }))}
-                          placeholder="Motivo de alta"
-                        />
+                {/* Stats Cards */}
+                <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 hover:shadow-md transition-shadow">
+                    <div className="flex items-center">
+                      <div className="p-2.5 rounded-lg bg-teal-50 text-teal-600">
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a4 4 0 118 0v4m-4 6v6m-4-6h8m-8 6h8" />
+                        </svg>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Sesiones pendientes y progreso */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mt-8">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Sesiones pendientes</h2>
-                {sessionLoading && <span className="text-sm text-gray-500">Cargando...</span>}
-              </div>
-              {sessions.filter(s => s.status !== 'completed').length === 0 ? (
-                <p className="text-gray-500">No hay sesiones pendientes.</p>
-              ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {sessions.filter(s => s.status !== 'completed').map((session) => (
-                    <div key={session.id} className="border border-gray-200 rounded-lg p-4 flex flex-col justify-between">
-                      <div>
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">
-                              Sesión con {patientMap[session.userId]?.name || patientMap[session.userId]?.email || session.userId}
-                            </p>
-                            <p className="text-xs text-gray-500">Tipo: {session.sessionType}</p>
-                          </div>
-                          <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700">
-                            {session.status}
-                          </span>
-                        </div>
-                        <div className="mt-2">
-                          <label className="block text-xs text-gray-500 mb-1">Progreso ({session.progress || 0}%)</label>
-                          <input
-                            type="range"
-                            min="0"
-                            max="100"
-                            value={session.progress || 0}
-                            onChange={(e) => handleProgressUpdate(session.id, Number(e.target.value))}
-                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                          />
-                        </div>
-                      </div>
-                      {/* Mostrar información de sesión programada */}
-                      {session.status === 'scheduled' && session.scheduledDate && (
-                        <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
-                          <p className="text-xs text-blue-800">
-                            <strong>Programada:</strong> {new Date(session.scheduledDate + 'T00:00:00').toLocaleDateString('es-ES')} {session.scheduledTime ? `a las ${session.scheduledTime}` : ''}
-                          </p>
-                          {session.meetingType ? (
-                            <p className="text-xs text-blue-700 mt-1">
-                              Tipo: {session.meetingType === 'virtual' ? 'Virtual' : 'Presencial'}
-                              {!session.meetingLink && !session.meetingLocation && (
-                                <span className="ml-2 text-orange-600 font-semibold">⚠️ Pendiente enviar detalles</span>
-                              )}
-                            </p>
-                          ) : (
-                            <p className="text-xs text-orange-700 mt-1">
-                              ⏳ Esperando que el paciente elija el tipo de sesión
-                            </p>
-                          )}
-                        </div>
-                      )}
-
-                      <div className="mt-3 flex items-center justify-between gap-2">
-                        {session.status === 'scheduled' && session.meetingType && !session.meetingLink && !session.meetingLocation && (
-                          <button
-                            onClick={() => {
-                              setSelectedSessionForDetails(session);
-                              setShowMeetingDetailsModal(true);
-                            }}
-                            className="px-3 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700"
-                          >
-                            Enviar {session.meetingType === 'virtual' ? 'Enlace' : 'Ubicación'}
-                          </button>
-                        )}
-                        <button
-                          onClick={() => {
-                            setSelectedSession(session);
-                            // Limpiar 'none' al cargar las notas
-                            const cleanNotes = session.notes && session.notes !== 'none' ? session.notes : '';
-                            setSessionNotes(cleanNotes);
-                          }}
-                          className="px-3 py-2 bg-primary-600 text-white rounded-lg text-sm hover:bg-primary-700 disabled:opacity-50"
-                        >
-                          Gestionar Sesión
-                        </button>
+                      <div className="ml-3 sm:ml-4">
+                        <p className="text-xs sm:text-sm font-medium text-gray-500">Sesiones Totales</p>
+                        <p className="text-lg sm:text-2xl font-bold text-gray-900">{stats.totalSessions}</p>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                  </div>
 
-            {/* Main Content Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Profile Card */}
-              <div className="lg:col-span-1">
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                  <div className="text-center mb-6">
-                    {professionalData?.photoURL ? (
-                      <img
-                        src={professionalData.photoURL}
-                        alt={professionalData.fullName || professionalData.name}
-                        className="w-24 h-24 rounded-full object-cover border-4 border-gray-200 mx-auto mb-4"
-                      />
-                    ) : (
-                      <div className="w-24 h-24 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <span className="text-white text-2xl font-semibold">
-                          {professionalData?.fullName?.charAt(0)?.toUpperCase() || professionalData?.name?.charAt(0)?.toUpperCase() || 'P'}
-                        </span>
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 hover:shadow-md transition-shadow">
+                    <div className="flex items-center">
+                      <div className="p-2.5 rounded-lg bg-emerald-50 text-emerald-600">
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                        </svg>
                       </div>
-                    )}
-                    <h3 className="text-xl font-semibold text-gray-900">{professionalData?.fullName || professionalData?.name}</h3>
-                    <p className="text-gray-600">{professionalData?.speciality}</p>
-                    <div className="flex items-center justify-center mt-2">
-                      <div className="flex items-center">
-                        <svg className="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                      <div className="ml-3 sm:ml-4">
+                        <p className="text-xs sm:text-sm font-medium text-gray-500">Mis Pacientes</p>
+                        <p className="text-lg sm:text-2xl font-bold text-gray-900">{stats.totalPatients}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 hover:shadow-md transition-shadow">
+                    <div className="flex items-center">
+                      <div className="p-2.5 rounded-lg bg-amber-50 text-amber-500">
+                        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
                           <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                         </svg>
-                        <span className="ml-1 text-sm text-gray-600">
-                          {professionalData?.rating} ({professionalData?.ratingCount} reseñas)
-                        </span>
+                      </div>
+                      <div className="ml-3 sm:ml-4">
+                        <p className="text-xs sm:text-sm font-medium text-gray-500">Calificación</p>
+                        <p className="text-lg sm:text-2xl font-bold text-gray-900">{stats.averageRating}</p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="space-y-4">
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-700 mb-2">Especialidad</h4>
-                      <p className="text-sm text-gray-900">{professionalData?.speciality}</p>
-                    </div>
-
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-700 mb-2">Años de experiencia</h4>
-                      <p className="text-sm text-gray-900">{professionalData?.exprecienceYears} años</p>
-                    </div>
-
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-700 mb-2">Biografía</h4>
-                      <p className="text-sm text-gray-900">{professionalData?.bio}</p>
-                    </div>
-
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-700 mb-2">Contacto</h4>
-                      <div className="space-y-2">
-                        <p className="text-sm text-gray-900">{professionalData?.contact?.phone}</p>
-                        <p className="text-sm text-gray-900">{professionalData?.contact?.email}</p>
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 hover:shadow-md transition-shadow">
+                    <div className="flex items-center">
+                      <div className="p-2.5 rounded-lg bg-violet-50 text-violet-600">
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div className="ml-3 sm:ml-4">
+                        <p className="text-xs sm:text-sm font-medium text-gray-500">Opiniones</p>
+                        <p className="text-lg sm:text-2xl font-bold text-gray-900">{stats.ratingCount}</p>
                       </div>
                     </div>
+                  </div>
+                </div>
 
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Left Column: Scheduled Sessions */}
+                  <div className="lg:col-span-2 space-y-6">
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                      <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-lg font-bold text-gray-900">Próximas Sesiones</h2>
+                        <button
+                          onClick={() => setShowNewSessionModal(true)}
+                          className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-semibold flex items-center transition-colors shadow-sm"
+                        >
+                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                          </svg>
+                          Programar Sesión
+                        </button>
+                      </div>
+                      
+                      {sessions.filter(s => s.status !== 'completed').length === 0 ? (
+                        <div className="text-center py-8 text-gray-400">
+                          <p>No tienes sesiones programadas pendientes.</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {sessions.filter(s => s.status !== 'completed').slice(0, 3).map((session) => (
+                            <div key={session.id} className="border border-gray-100 rounded-xl p-4 flex flex-col justify-between hover:border-teal-200 hover:bg-teal-50/20 transition-all duration-150">
+                              <div>
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <span className="px-2 py-0.5 text-[10px] font-semibold bg-teal-50 text-teal-700 rounded-full">
+                                      {session.sessionType === 'therapy' ? 'Terapia' : session.sessionType === 'evaluation' ? 'Evaluación' : 'Consulta'}
+                                    </span>
+                                    <h4 className="font-bold text-gray-900 mt-1">
+                                      {patientMap[session.userId]?.name || 'Paciente'}
+                                    </h4>
+                                  </div>
+                                  <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full ${
+                                    session.status === 'scheduled' ? 'bg-yellow-50 text-yellow-700' : 'bg-blue-50 text-blue-700'
+                                  }`}>
+                                    {session.status === 'scheduled' ? 'Programada' : 'Activa'}
+                                  </span>
+                                </div>
+                                <div className="mt-2 text-xs text-gray-500 space-y-1">
+                                  <p>📅 Fecha: {session.scheduledDate || 'No agendada'}</p>
+                                  <p>⏰ Hora: {session.scheduledTime || 'No agendada'}</p>
+                                  {session.meetingType && (
+                                    <p>🛡️ Modalidad: {session.meetingType === 'virtual' ? '💻 Virtual' : '📍 Presencial'}</p>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="mt-3 flex flex-col sm:flex-row gap-2">
+                                {session.meetingType && !session.meetingLink && !session.meetingLocation && (
+                                  <button
+                                    onClick={() => {
+                                      setSelectedSessionForDetails(session);
+                                      setShowMeetingDetailsModal(true);
+                                    }}
+                                    className="px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-xs font-semibold flex items-center justify-center transition-colors"
+                                  >
+                                    Configurar Acceso
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => {
+                                    setSelectedSession(session);
+                                    setSessionNotes(session.notes || '');
+                                    setClosingSessionId(session.id);
+                                  }}
+                                  className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-semibold flex items-center justify-center transition-colors shadow-sm flex-1"
+                                >
+                                  Ver/Finalizar Sesión
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Right Column: Profile details & activity */}
+                  <div className="space-y-6">
+                    {/* Mini Profile Card */}
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 text-center">
+                      {professionalData?.photoURL ? (
+                        <img
+                          src={professionalData.photoURL}
+                          alt={professionalData.fullName}
+                          className="w-16 h-16 rounded-full object-cover mx-auto border-2 border-teal-100 shadow-sm mb-3"
+                        />
+                      ) : (
+                        <div className="w-16 h-16 bg-gradient-to-br from-teal-500 to-teal-700 rounded-full flex items-center justify-center mx-auto shadow-sm mb-3">
+                          <span className="text-white text-xl font-bold">
+                            {professionalData?.fullName?.charAt(0)?.toUpperCase() || 'P'}
+                          </span>
+                        </div>
+                      )}
+                      <h3 className="font-bold text-gray-900 text-base">{professionalData?.fullName || professionalData?.name}</h3>
+                      <p className="text-xs text-teal-600 font-semibold mb-2">{professionalData?.speciality || 'Especialista'}</p>
+                      <p className="text-xs text-gray-500 line-clamp-3 mb-4">{professionalData?.bio || 'Sin biografía redactada.'}</p>
+                      <button
+                        onClick={() => {
+                          const currentSpecialities = professionalData?.specialities ||
+                            (professionalData?.speciality ? [professionalData.speciality] : []);
+                          setProfileFormData({
+                            fullName: professionalData?.fullName || professionalData?.name || '',
+                            phone: professionalData?.contact?.phone || professionalData?.phone || '',
+                            bio: professionalData?.bio || '',
+                            whatsapp: professionalData?.contact?.whatsapp || '',
+                            instagram: professionalData?.contact?.instagram || '',
+                            linkedin: professionalData?.contact?.linkedin || '',
+                            specialities: currentSpecialities,
+                            exprecienceYears: professionalData?.exprecienceYears || ''
+                          });
+                          setShowEditProfileModal(true);
+                        }}
+                        className="w-full py-2 bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 rounded-xl text-xs font-semibold transition-colors"
+                      >
+                        Editar Mi Perfil
+                      </button>
+                    </div>
+
+                    {/* Recent Activity */}
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                      <h3 className="text-sm font-bold text-gray-900 mb-3">Actividad Reciente</h3>
+                      {recentActivities.length === 0 ? (
+                        <p className="text-xs text-gray-400 text-center py-4">No hay actividades registradas.</p>
+                      ) : (
+                        <div className="space-y-3 max-h-48 overflow-y-auto pr-1">
+                          {recentActivities.slice(0, 4).map((activity) => (
+                            <div key={activity.id} className="flex items-start space-x-2 text-xs">
+                              <span className={`w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${
+                                activity.color === 'green' ? 'bg-teal-500' : 'bg-blue-500'
+                              }`} />
+                              <div>
+                                <p className="font-semibold text-gray-800">{activity.title}</p>
+                                <p className="text-gray-500 text-[10px]">{formatRelativeTime(activity.timestamp)}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ════════════════ MIS PACIENTES ════════════════ */}
+            {activeTab === 'pacientes' && (
+              <div className="space-y-6 animate-fade-in">
+                {/* Search Header */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                  <div className="flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center">
+                    <div>
+                      <h2 className="text-lg font-bold text-gray-900">Listado de Pacientes</h2>
+                      <p className="text-xs text-gray-500">Busca, filtra y gestiona el progreso de tus pacientes.</p>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <div className="relative flex-1 min-w-[200px]">
+                        <input
+                          type="text"
+                          placeholder="Buscar por nombre..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="w-full pl-9 pr-3 py-1.5 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:ring-1 focus:ring-teal-500 focus:outline-none transition-all"
+                        />
+                        <svg className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                      </div>
+
+                      <select
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                        className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-1.5 text-xs focus:ring-1 focus:ring-teal-500 focus:outline-none transition-all"
+                      >
+                        <option value="all">Todos los estados</option>
+                        <option value="active">Activos</option>
+                        <option value="discharged">De Alta</option>
+                      </select>
+
+                      <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                        className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-1.5 text-xs focus:ring-1 focus:ring-teal-500 focus:outline-none transition-all"
+                      >
+                        <option value="name">Ordenar por nombre</option>
+                        <option value="sessionCount">Ordenar por sesiones</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Grid de pacientes */}
+                  {patients.length === 0 ? (
+                    <div className="text-center py-12 text-gray-400">
+                      <p>No tienes pacientes asignados actualmente.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
+                      {patients
+                        .filter(p => {
+                          const nameMatch = p.name?.toLowerCase().includes(searchTerm.toLowerCase()) || p.email?.toLowerCase().includes(searchTerm.toLowerCase());
+                          const isDischarged = p.careStatus === 'alta';
+                          const statusMatch = statusFilter === 'all' || 
+                            (statusFilter === 'active' && !isDischarged) || 
+                            (statusFilter === 'discharged' && isDischarged);
+                          return nameMatch && statusMatch;
+                        })
+                        .sort((a, b) => {
+                          if (sortBy === 'name') return (a.name || '').localeCompare(b.name || '');
+                          if (sortBy === 'sessionCount') {
+                            const countA = sessions.filter(s => s.userId === a.id).length;
+                            const countB = sessions.filter(s => s.userId === b.id).length;
+                            return countB - countA;
+                          }
+                          return 0;
+                        })
+                        .map((patient) => {
+                          const patientSessions = sessions.filter(s => s.userId === patient.id);
+                          const totalSessions = patientSessions.length;
+                          const completedSessions = patientSessions.filter(s => s.status === 'completed').length;
+                          const isDischarged = patient.careStatus === 'alta';
+
+                          return (
+                            <div key={patient.id} className="border border-gray-100 hover:border-teal-200 rounded-xl p-4 bg-white hover:shadow-sm transition-all duration-150">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-3">
+                                  <div className="w-10 h-10 rounded-full bg-teal-50 flex items-center justify-center text-teal-600 font-bold">
+                                    {patient.name?.charAt(0) || 'P'}
+                                  </div>
+                                  <div>
+                                    <h4 className="font-bold text-gray-900 text-sm">{patient.name || 'Paciente'}</h4>
+                                    <p className="text-[10px] text-gray-500">{patient.email}</p>
+                                  </div>
+                                </div>
+                                <span className={`px-2 py-0.5 text-[9px] font-bold rounded-full ${
+                                  isDischarged ? 'bg-gray-100 text-gray-600' : 'bg-emerald-50 text-emerald-700'
+                                }`}>
+                                  {isDischarged ? 'De Alta' : 'Activo'}
+                                </span>
+                              </div>
+
+                              <div className="mt-3 grid grid-cols-2 gap-2 text-xs bg-gray-50/50 p-2 rounded-lg">
+                                <div>
+                                  <p className="text-[10px] text-gray-400">Total Sesiones</p>
+                                  <p className="font-semibold text-gray-800">{totalSessions}</p>
+                                </div>
+                                <div>
+                                  <p className="text-[10px] text-gray-400">Completadas</p>
+                                  <p className="font-semibold text-gray-800">{completedSessions}</p>
+                                </div>
+                              </div>
+
+                              <div className="mt-4 flex flex-wrap gap-2 justify-end">
+                                <button
+                                  onClick={() => handleStartChatWithPatient(patient.id)}
+                                  className="px-2.5 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1 shadow-sm transition-colors"
+                                >
+                                  💬 Chat
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setSelectedPatientForHistory(patient);
+                                    // Filtrar sesiones del paciente
+                                    const history = sessions.filter(s => s.userId === patient.id);
+                                    setPatientSessionHistory(history);
+                                    setShowSessionHistoryModal(true);
+                                  }}
+                                  className="px-2.5 py-1.5 border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-lg text-xs font-semibold transition-colors"
+                                >
+                                  Ficha Clínica
+                                </button>
+                                {!isDischarged ? (
+                                  <button
+                                    onClick={() => {
+                                      setPatientToDischarge(patient);
+                                      setShowDischargeModal(true);
+                                    }}
+                                    className="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-xs font-semibold transition-colors"
+                                  >
+                                    Dar de Alta
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={async () => {
+                                      try {
+                                        await updateUserCareStatus(patient.id, { careStatus: 'activo' });
+                                        toast.success('Paciente reactivado');
+                                      } catch (e) {
+                                        toast.error('Error al reactivar paciente');
+                                      }
+                                    }}
+                                    className="px-2.5 py-1.5 bg-teal-50 hover:bg-teal-100 text-teal-700 rounded-lg text-xs font-semibold transition-colors"
+                                  >
+                                    Reactivar
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            {/* ════════════════ DISPONIBILIDAD / HORARIOS ════════════════ */}
+            {activeTab === 'horarios' && (
+              <div className="space-y-6 animate-fade-in">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                  <div className="flex justify-between items-center border-b border-gray-100 pb-4 mb-5">
+                    <div>
+                      <h2 className="text-lg font-bold text-gray-900">Agenda y Disponibilidad</h2>
+                      <p className="text-xs text-gray-500">Configura tus horas laborales, zonas horarias y días de descanso.</p>
+                    </div>
                     <button
-                      onClick={() => {
-                        // Inicializar formulario con datos actuales
-                        // Manejar tanto specialities (array) como speciality (string)
-                        const currentSpecialities = professionalData?.specialities ||
-                          (professionalData?.speciality ? [professionalData.speciality] : []);
-
-                        setProfileFormData({
-                          fullName: professionalData?.fullName || professionalData?.name || '',
-                          phone: professionalData?.contact?.phone || professionalData?.phone || '',
-                          bio: professionalData?.bio || '',
-                          whatsapp: professionalData?.contact?.whatsapp || '',
-                          instagram: professionalData?.contact?.instagram || '',
-                          linkedin: professionalData?.contact?.linkedin || '',
-                          specialities: currentSpecialities,
-                          exprecienceYears: professionalData?.exprecienceYears || ''
-                        });
-                        setShowEditProfileModal(true);
-                      }}
-                      className="w-full mt-6 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                      onClick={handleSaveAvailability}
+                      disabled={savingAvailability}
+                      className="px-4 py-2 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-300 text-white rounded-lg text-xs font-bold transition-all shadow-sm"
                     >
-                      Editar Perfil
+                      {savingAvailability ? 'Guardando...' : 'Guardar Agenda'}
                     </button>
                   </div>
-                </div>
-              </div>
 
-              {/* Main Content */}
-              <div className="lg:col-span-2 space-y-6">
-                {/* Recent Activity */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Actividad Reciente</h3>
-                  <div className="space-y-4">
-                    {recentActivities.length === 0 ? (
-                      <p className="text-gray-500 text-center py-4">No hay actividades recientes</p>
-                    ) : (
-                      recentActivities.map((activity) => (
-                        <div key={activity.id} className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
-                          <div className={`w-10 h-10 ${activity.color === 'green' ? 'bg-green-100' : activity.color === 'blue' ? 'bg-blue-100' : 'bg-yellow-100'} rounded-full flex items-center justify-center`}>
-                            {activity.icon === 'check' ? (
-                              <svg className={`w-5 h-5 ${activity.color === 'green' ? 'text-green-600' : 'text-blue-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                            ) : (
-                              <svg className={`w-5 h-5 ${activity.color === 'green' ? 'text-green-600' : 'text-blue-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                              </svg>
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Disponibilidad Semanal */}
+                    <div className="lg:col-span-2 space-y-4">
+                      <h3 className="text-sm font-bold text-gray-900 border-b border-gray-50 pb-2">Horario Semanal</h3>
+                      
+                      {daysOfWeek.map((day) => {
+                        const dayData = availability.schedule[day.key] || { isAvailable: false, slots: [] };
+                        return (
+                          <div key={day.key} className="border border-gray-100 rounded-xl p-4 bg-gray-50/30">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center space-x-3">
+                                <input
+                                  type="checkbox"
+                                  checked={dayData.isAvailable}
+                                  onChange={() => handleToggleDay(day.key)}
+                                  className="h-4 w-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500"
+                                />
+                                <span className={`font-semibold text-sm ${dayData.isAvailable ? 'text-gray-900' : 'text-gray-400'}`}>
+                                  {day.label}
+                                </span>
+                              </div>
+                              {dayData.isAvailable && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleAddSlot(day.key)}
+                                  className="px-2 py-1 text-[10px] bg-teal-50 text-teal-700 hover:bg-teal-100 rounded font-semibold transition-colors"
+                                >
+                                  + Añadir Franja
+                                </button>
+                              )}
+                            </div>
+
+                            {dayData.isAvailable && (
+                              <div className="space-y-2">
+                                {dayData.slots.length === 0 ? (
+                                  <p className="text-xs text-gray-400 italic">No hay franjas horarias añadidas. Reserva todo el día libre.</p>
+                                ) : (
+                                  dayData.slots.map((slot, sIndex) => (
+                                    <div key={sIndex} className="flex items-center space-x-2 bg-white p-2 rounded-lg border border-gray-100">
+                                      <input
+                                        type="time"
+                                        value={slot.startTime}
+                                        onChange={(e) => handleUpdateSlot(day.key, sIndex, 'startTime', e.target.value)}
+                                        className="bg-gray-50 border border-gray-200 rounded p-1 text-xs text-gray-700 focus:outline-none"
+                                      />
+                                      <span className="text-gray-400 text-xs">a</span>
+                                      <input
+                                        type="time"
+                                        value={slot.endTime}
+                                        onChange={(e) => handleUpdateSlot(day.key, sIndex, 'endTime', e.target.value)}
+                                        className="bg-gray-50 border border-gray-200 rounded p-1 text-xs text-gray-700 focus:outline-none"
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDeleteSlot(day.key, sIndex)}
+                                        className="p-1 text-red-500 hover:bg-red-50 rounded"
+                                      >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                      </button>
+                                    </div>
+                                  ))
+                                )}
+                              </div>
                             )}
                           </div>
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-900">{activity.title}</p>
-                            <p className="text-sm text-gray-600">{activity.description}</p>
-                          </div>
-                          <span className="text-sm text-gray-500">{formatRelativeTime(activity.timestamp)}</span>
+                        );
+                      })}
+                    </div>
+
+                    {/* Ajustes Generales, Modalidades y Excepciones */}
+                    <div className="space-y-6">
+                      {/* Ajustes Generales */}
+                      <div className="bg-gray-50/30 rounded-xl p-4 border border-gray-100 space-y-3">
+                        <h3 className="text-sm font-bold text-gray-900 border-b border-gray-50 pb-2">Ajustes Agenda</h3>
+                        
+                        <div>
+                          <label className="block text-xs text-gray-500 mb-1">Zona Horaria</label>
+                          <select
+                            value={availability.timezone}
+                            onChange={(e) => setAvailability(prev => ({ ...prev, timezone: e.target.value }))}
+                            className="w-full bg-white border border-gray-200 rounded-lg p-2 text-xs focus:ring-1 focus:ring-teal-500 focus:outline-none"
+                          >
+                            <option value="America/Asuncion">Paraguay (America/Asuncion)</option>
+                            <option value="America/Argentina/Buenos_Aires">Argentina (Buenos Aires)</option>
+                            <option value="America/Santiago">Chile (Santiago)</option>
+                            <option value="America/Bogota">Colombia (Bogotá)</option>
+                          </select>
                         </div>
-                      ))
-                    )}
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-[10px] text-gray-500 mb-1">Citas por Día</label>
+                            <input
+                              type="number"
+                              value={availability.sessionSettings.maxSessionsPerDay}
+                              onChange={(e) => setAvailability(prev => ({
+                                ...prev,
+                                sessionSettings: { ...prev.sessionSettings, maxSessionsPerDay: Number(e.target.value) }
+                              }))}
+                              className="w-full bg-white border border-gray-200 rounded-lg p-2 text-xs focus:outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] text-gray-500 mb-1">Anticipación (Días)</label>
+                            <input
+                              type="number"
+                              value={availability.sessionSettings.advanceBookingDays}
+                              onChange={(e) => setAvailability(prev => ({
+                                ...prev,
+                                sessionSettings: { ...prev.sessionSettings, advanceBookingDays: Number(e.target.value) }
+                              }))}
+                              className="w-full bg-white border border-gray-200 rounded-lg p-2 text-xs focus:outline-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Modalidades */}
+                      <div className="bg-gray-50/30 rounded-xl p-4 border border-gray-100 space-y-2">
+                        <h3 className="text-sm font-bold text-gray-900 border-b border-gray-50 pb-2">Modalidad de Consulta</h3>
+                        
+                        <div className="space-y-2">
+                          <label className="flex items-center space-x-2 text-xs text-gray-700">
+                            <input
+                              type="checkbox"
+                              checked={availability.modalities.online}
+                              onChange={(e) => setAvailability(prev => ({
+                                ...prev,
+                                modalities: { ...prev.modalities, online: e.target.checked }
+                              }))}
+                              className="text-teal-600 rounded"
+                            />
+                            <span>💻 Consultas Virtuales</span>
+                          </label>
+
+                          <label className="flex items-center space-x-2 text-xs text-gray-700">
+                            <input
+                              type="checkbox"
+                              checked={availability.modalities.inPerson}
+                              onChange={(e) => setAvailability(prev => ({
+                                ...prev,
+                                modalities: { ...prev.modalities, inPerson: e.target.checked }
+                              }))}
+                              className="text-teal-600 rounded"
+                            />
+                            <span>📍 Consultas Presenciales</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* Excepciones (Vacaciones / Festivos) */}
+                      <div className="bg-gray-50/30 rounded-xl p-4 border border-gray-100 space-y-3">
+                        <h3 className="text-sm font-bold text-gray-900 border-b border-gray-50 pb-2">Días Libres y Vacaciones</h3>
+                        
+                        <div className="space-y-2">
+                          <input
+                            type="date"
+                            value={newExceptionDate}
+                            onChange={(e) => setNewExceptionDate(e.target.value)}
+                            className="w-full bg-white border border-gray-200 rounded-lg p-2 text-xs"
+                          />
+                          <input
+                            type="text"
+                            placeholder="Motivo (ej. Feriado, Congreso)"
+                            value={newExceptionReason}
+                            onChange={(e) => setNewExceptionReason(e.target.value)}
+                            className="w-full bg-white border border-gray-200 rounded-lg p-2 text-xs"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleAddException}
+                            className="w-full py-1.5 bg-teal-50 hover:bg-teal-100 text-teal-700 rounded-lg text-xs font-bold transition-colors"
+                          >
+                            + Bloquear Fecha
+                          </button>
+                        </div>
+
+                        {availability.exceptions && availability.exceptions.length > 0 && (
+                          <div className="mt-3 space-y-1.5 max-h-32 overflow-y-auto">
+                            {availability.exceptions.map((exc, eIdx) => (
+                              <div key={eIdx} className="flex justify-between items-center bg-white p-2 rounded border border-gray-100 text-xs">
+                                <div>
+                                  <p className="font-semibold text-gray-800">{exc.date}</p>
+                                  <p className="text-gray-500 text-[10px]">{exc.reason}</p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteException(eIdx)}
+                                  className="text-red-500 hover:text-red-700"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
-
               </div>
-            </div>
+            )}
+
+            {/* ════════════════ REPORTES / ESTADÍSTICAS ════════════════ */}
+            {activeTab === 'reportes' && (
+              <div className="space-y-6 animate-fade-in">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                  <h2 className="text-lg font-bold text-gray-900">Análisis y Rendimiento</h2>
+                  <p className="text-xs text-gray-500 mb-5">Estadísticas reales sobre tus horas de consulta y valoraciones recibidas.</p>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div className="bg-teal-50 border border-teal-100 rounded-xl p-4">
+                      <p className="text-xs text-teal-600 font-semibold uppercase">Calificación Promedio</p>
+                      <h3 className="text-3xl font-extrabold text-teal-800 mt-1">{stats.averageRating} ⭐</h3>
+                      <p className="text-[10px] text-teal-500 mt-1">Basado en {stats.ratingCount} valoraciones</p>
+                    </div>
+                    <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
+                      <p className="text-xs text-blue-600 font-semibold uppercase">Sesiones Dadas</p>
+                      <h3 className="text-3xl font-extrabold text-blue-800 mt-1">{sessions.filter(s => s.status === 'completed').length}</h3>
+                      <p className="text-[10px] text-blue-500 mt-1">Sesiones completadas</p>
+                    </div>
+                    <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4">
+                      <p className="text-xs text-emerald-600 font-semibold uppercase">Tiempo en Consulta</p>
+                      <h3 className="text-3xl font-extrabold text-emerald-800 mt-1">
+                        {sessions.filter(s => s.status === 'completed').reduce((acc, s) => acc + (s.duration || 0), 0)} min
+                      </h3>
+                      <p className="text-[10px] text-emerald-500 mt-1">Minutos totales acumulados</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Gráfico de Volumen de Sesiones Completadas (SVG) */}
+                    <div className="border border-gray-100 rounded-xl p-4">
+                      <h4 className="text-sm font-bold text-gray-900 mb-4">Volumen de Sesiones por Mes (2026)</h4>
+                      <div className="relative h-60 w-full flex items-end justify-between bg-gray-50/50 p-4 rounded-lg">
+                        {(() => {
+                          const monthCounts = Array(12).fill(0);
+                          const monthsLabels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                          
+                          // Agrupar sesiones completadas por mes del año actual
+                          const currentYear = new Date().getFullYear();
+                          sessions.forEach(s => {
+                            if (s.status === 'completed' && s.endTime) {
+                              const date = s.endTime.toDate ? s.endTime.toDate() : new Date(s.endTime);
+                              if (date.getFullYear() === currentYear) {
+                                monthCounts[date.getMonth()]++;
+                              }
+                            }
+                          });
+
+                          const maxCount = Math.max(...monthCounts, 5); // Evitar división por cero
+
+                          return monthCounts.map((count, idx) => {
+                            const barHeight = (count / maxCount) * 80; // Altura en porcentaje (máximo 80%)
+                            return (
+                              <div key={idx} className="flex flex-col items-center flex-1">
+                                <div className="text-[10px] font-bold text-teal-800 mb-1">{count > 0 ? count : ''}</div>
+                                <div
+                                  style={{ height: `${barHeight || 4}px` }}
+                                  className="w-4 sm:w-6 bg-teal-600 rounded-t transition-all duration-300 hover:bg-teal-500"
+                                />
+                                <div className="text-[10px] text-gray-400 mt-2">{monthsLabels[idx]}</div>
+                              </div>
+                            );
+                          });
+                        })()}
+                      </div>
+                    </div>
+
+                    {/* Distribución de Calificaciones (Horizonal Bars) */}
+                    <div className="border border-gray-100 rounded-xl p-4">
+                      <h4 className="text-sm font-bold text-gray-900 mb-4">Distribución de Satisfacción (Pacientes)</h4>
+                      <div className="space-y-4">
+                        {(() => {
+                          const starCounts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+                          sessions.forEach(s => {
+                            const rating = s.sessionRating || s.professionalRating;
+                            if (rating >= 1 && rating <= 5) {
+                              starCounts[Math.round(rating)]++;
+                            }
+                          });
+
+                          const totalVotes = Object.values(starCounts).reduce((acc, v) => acc + v, 0) || 1;
+
+                          return [5, 4, 3, 2, 1].map((stars) => {
+                            const count = starCounts[stars];
+                            const percentage = Math.round((count / totalVotes) * 100);
+
+                            return (
+                              <div key={stars} className="flex items-center text-xs">
+                                <span className="w-12 text-gray-600 font-semibold">{stars} estrellas</span>
+                                <div className="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden mx-3">
+                                  <div
+                                    style={{ width: `${percentage}%` }}
+                                    className="h-full bg-amber-400 rounded-full"
+                                  />
+                                </div>
+                                <span className="w-8 text-right text-gray-500 font-bold">{percentage}%</span>
+                              </div>
+                            );
+                          });
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -3154,6 +3643,63 @@ const ProfessionalDashboard = () => {
           <ChatContainer userId={profId} userType="professional" initialConversationId={activeChatId} />
         </div>
       </Modal>
+
+      {/* ═══ Bottom Navigation Bar — solo móvil ═══ */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 shadow-[0_-4px_12px_-2px_rgba(0,0,0,0.05)] z-40 md:hidden">
+        <div className="flex items-center justify-around h-16 px-2 safe-area-pb">
+          {/* Inicio */}
+          <button
+            onClick={() => setActiveTab('inicio')}
+            className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${activeTab === 'inicio' ? 'text-teal-600' : 'text-gray-400 hover:text-gray-600'}`}
+          >
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-0.5 ${activeTab === 'inicio' ? 'bg-teal-50' : 'bg-transparent'}`}>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
+            </div>
+            <span className="text-[10px] font-semibold leading-tight">Inicio</span>
+          </button>
+
+          {/* Pacientes */}
+          <button
+            onClick={() => setActiveTab('pacientes')}
+            className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${activeTab === 'pacientes' ? 'text-teal-600' : 'text-gray-400 hover:text-gray-600'}`}
+          >
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-0.5 ${activeTab === 'pacientes' ? 'bg-teal-50' : 'bg-transparent'}`}>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+            </div>
+            <span className="text-[10px] font-semibold leading-tight">Pacientes</span>
+          </button>
+
+          {/* Disponibilidad */}
+          <button
+            onClick={() => setActiveTab('horarios')}
+            className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${activeTab === 'horarios' ? 'text-teal-600' : 'text-gray-400 hover:text-gray-600'}`}
+          >
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-0.5 ${activeTab === 'horarios' ? 'bg-teal-50' : 'bg-transparent'}`}>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a4 4 0 118 0v4m-4 6v6m-4-6h8m-8 6h8" />
+              </svg>
+            </div>
+            <span className="text-[10px] font-semibold leading-tight">Agenda</span>
+          </button>
+
+          {/* Reportes */}
+          <button
+            onClick={() => setActiveTab('reportes')}
+            className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${activeTab === 'reportes' ? 'text-teal-600' : 'text-gray-400 hover:text-gray-600'}`}
+          >
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-0.5 ${activeTab === 'reportes' ? 'bg-teal-50' : 'bg-transparent'}`}>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+            <span className="text-[10px] font-semibold leading-tight">Reportes</span>
+          </button>
+        </div>
+      </nav>
     </div >
   );
 };

@@ -370,6 +370,26 @@ const UserDashboard = () => {
     return () => unsubscribe && unsubscribe();
   }, [currentUser]);
 
+  // Efecto para hacer scroll al progreso de sesiones si viene el hash en la URL
+  useEffect(() => {
+    const handleHashChange = () => {
+      if (window.location.hash === '#progreso-sesiones') {
+        setTimeout(() => {
+          const el = document.getElementById('progreso-sesiones');
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, 300);
+      }
+    };
+
+    // Ejecutar al cargar la página
+    handleHashChange();
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
   // Función para calificar la sesión
   const handleRateSession = async () => {
     if (!ratingSession || sessionRating === 0) {
@@ -493,24 +513,24 @@ const UserDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-surface-off via-primary-50 to-secondary-50 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-surface-off via-primary-50 to-secondary-50 relative overflow-hidden pb-20 md:pb-0">
       {/* Decorative background blobs for fluid feel */}
       <div className="absolute top-[10%] left-[-10%] w-96 h-96 bg-primary-300 rounded-full mix-blend-multiply filter blur-[80px] opacity-20 animate-float-slow"></div>
       <div className="absolute bottom-[20%] right-[-10%] w-[30rem] h-[30rem] bg-secondary-300 rounded-full mix-blend-multiply filter blur-[80px] opacity-20 animate-float-slow" style={{ animationDelay: '2s' }}></div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative z-10 animate-fade-in-up">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 relative z-10 animate-fade-in-up">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 truncate max-w-xs sm:max-w-md">
                 ¡Hola, {userStats?.name || currentUser?.displayName || currentUser?.email || 'Usuario'}!
               </h1>
-              <p className="text-gray-600 mt-2">
+              <p className="text-gray-600 mt-1 text-sm sm:text-base">
                 Bienvenido, {userStats?.name || currentUser?.displayName || currentUser?.email || 'Usuario'}
               </p>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto">
               {/* Icono de notificaciones */}
               <div className="relative">
                 <button
@@ -527,7 +547,7 @@ const UserDashboard = () => {
 
                 {/* Dropdown de notificaciones */}
                 {showNotifications && (
-                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg z-50 border border-gray-200 max-h-96 overflow-y-auto">
+                  <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-white rounded-lg shadow-lg z-50 border border-gray-200 max-h-96 overflow-y-auto">
                     <div className="p-4 border-b border-gray-200">
                       <div className="flex items-center justify-between">
                         <div>
@@ -642,7 +662,7 @@ const UserDashboard = () => {
                   className="w-12 h-12 rounded-full border-2 border-white shadow-lg"
                 />
               )}
-              <div className="text-right">
+              <div className="text-right hidden sm:block">
                 <p className="text-sm text-gray-500">Miembro desde</p>
                 <p className="text-sm font-medium text-gray-900">
                   {userStats?.createdAt?.toDate?.()?.toLocaleDateString() || 'Reciente'}
@@ -655,11 +675,11 @@ const UserDashboard = () => {
         {/* Estado de evaluación */}
         <div className="mb-8">
           {!hasCompletedEvaluation ? (
-            <div className="glass-panel overflow-hidden relative rounded-3xl p-8 bg-gradient-to-br from-white/60 to-white/30 border border-white/50">
+            <div className="glass-panel overflow-hidden relative rounded-3xl p-6 sm:p-8 bg-gradient-to-br from-white/60 to-white/30 border border-white/50">
               {/* Blur accent */}
               <div className="absolute -top-20 -right-20 w-64 h-64 bg-primary-200 rounded-full mix-blend-multiply filter blur-3xl opacity-50"></div>
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+                <div className="flex-1 text-center sm:text-left">
                   <h2 className="text-2xl font-bold mb-2">
                     ¡Comienza tu evaluación emocional!
                   </h2>
@@ -669,12 +689,12 @@ const UserDashboard = () => {
                   </p>
                   <button
                     onClick={handleStartEvaluation}
-                    className="bg-primary-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-primary-700 transition-colors duration-200 shadow-md"
+                    className="bg-primary-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-primary-700 transition-colors duration-200 shadow-md w-full sm:w-auto text-center"
                   >
                     Empezar Evaluación
                   </button>
                 </div>
-                <div className="ml-8 relative z-10">
+                <div className="hidden sm:block ml-8 relative z-10">
                   <div className="w-24 h-24 bg-primary-100 rounded-[2rem] flex items-center justify-center shadow-inner">
                     <svg className="w-12 h-12 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -684,10 +704,10 @@ const UserDashboard = () => {
               </div>
             </div>
           ) : isSearchingProfessional ? (
-            <div className="glass-panel overflow-hidden relative rounded-3xl p-8 bg-gradient-to-br from-amber-50/80 to-white/40 border border-white/50">
+            <div className="glass-panel overflow-hidden relative rounded-3xl p-6 sm:p-8 bg-gradient-to-br from-amber-50/80 to-white/40 border border-white/50">
               <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-amber-200 rounded-full mix-blend-multiply filter blur-3xl opacity-40"></div>
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+                <div className="flex-1 text-center sm:text-left">
                   <h2 className="text-2xl font-bold mb-2">
                     Buscando tu profesional ideal
                   </h2>
@@ -695,12 +715,12 @@ const UserDashboard = () => {
                     Estamos buscando un profesional especializado que se adecue perfectamente a tu caso.
                     Te notificaremos en cuanto encontremos la mejor opción para ti.
                   </p>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center justify-center sm:justify-start space-x-2">
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                     <span className="text-yellow-100">Buscando...</span>
                   </div>
                 </div>
-                <div className="ml-8">
+                <div className="hidden sm:block ml-8">
                   <div className="w-24 h-24 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
                     <svg className="w-12 h-12 text-white animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -710,19 +730,19 @@ const UserDashboard = () => {
               </div>
             </div>
           ) : assignedProfessional ? (
-            <div className="glass-panel overflow-hidden relative rounded-3xl p-8 sm:p-10 bg-gradient-to-br from-primary-50/80 to-secondary-50/40 border border-white/60">
+            <div className="glass-panel overflow-hidden relative rounded-3xl p-4 sm:p-8 md:p-10 bg-gradient-to-br from-primary-50/80 to-secondary-50/40 border border-white/60">
               <div className="absolute -top-20 -right-20 w-80 h-80 bg-primary-200/50 rounded-full mix-blend-multiply filter blur-3xl opacity-40"></div>
               <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-secondary-200/50 rounded-full mix-blend-multiply filter blur-3xl opacity-40"></div>
-              <div className="flex flex-col lg:flex-row items-center lg:items-start justify-between relative z-10 gap-8">
+              <div className="flex flex-col lg:flex-row items-center lg:items-start justify-between relative z-10 gap-6 md:gap-8">
                 <div className="flex-1 w-full">
-                  <h2 className="text-3xl font-extrabold text-gray-900 mb-2">
+                  <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-2">
                     ¡Profesional asignado!
                   </h2>
-                  <p className="text-gray-600 mb-6 font-medium text-lg">
+                  <p className="text-gray-600 mb-4 sm:mb-6 font-medium text-base sm:text-lg">
                     Hemos encontrado el profesional ideal para ti:
                   </p>
-                  <div className="mb-6 bg-white/60 backdrop-blur-md rounded-2xl p-6 shadow-sm border border-gray-100">
-                    <h3 className="font-bold text-2xl text-primary-700">{assignedProfessional.name}</h3>
+                  <div className="mb-4 sm:mb-6 bg-white/60 backdrop-blur-md rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-100">
+                    <h3 className="font-bold text-xl sm:text-2xl text-primary-700">{assignedProfessional.name}</h3>
                     <p className="text-gray-600 font-medium">{assignedProfessional.specialty || assignedProfessional.speciality || assignedProfessional.specialities?.[0]}</p>
                     <div className="flex items-center gap-4 mt-2 mb-4">
                       <span className="bg-yellow-100 text-yellow-800 text-xs font-semibold px-2.5 py-0.5 rounded-full flex items-center">
@@ -756,10 +776,10 @@ const UserDashboard = () => {
                       </div>
                     )}
                   </div>
-                  <div className="flex flex-wrap gap-4">
+                  <div className="flex flex-col sm:flex-row gap-3">
                     <button
                       onClick={handleStartChat}
-                      className="bg-primary-600 text-white px-8 py-3.5 rounded-xl font-medium hover:bg-primary-700 hover:-translate-y-1 hover:shadow-lg transition-all duration-300 flex items-center space-x-2"
+                      className="bg-primary-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-primary-700 hover:-translate-y-1 hover:shadow-lg transition-all duration-300 flex items-center justify-center space-x-2 w-full sm:w-auto"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -768,19 +788,19 @@ const UserDashboard = () => {
                     </button>
                     <button
                       onClick={handleViewResults}
-                      className="glass-panel text-gray-700 px-6 py-3.5 rounded-xl font-medium hover:bg-white/90 hover:-translate-y-1 transition-all duration-300"
+                      className="glass-panel text-gray-700 px-5 py-3 rounded-xl font-medium hover:bg-white/90 hover:-translate-y-1 transition-all duration-300 w-full sm:w-auto text-center"
                     >
                       Ver Evaluaciones
                     </button>
                     <button
                       onClick={handleStartEvaluation}
-                      className="border border-gray-300 bg-white/30 text-gray-700 px-6 py-3.5 rounded-xl font-medium hover:bg-white/50 transition-all duration-300"
+                      className="border border-gray-300 bg-white/30 text-gray-700 px-5 py-3 rounded-xl font-medium hover:bg-white/50 transition-all duration-300 w-full sm:w-auto text-center"
                     >
                       Nueva Evaluación
                     </button>
                   </div>
                 </div>
-                <div className="flex-shrink-0 animate-float-slow">
+                <div className="hidden sm:block flex-shrink-0 animate-float-slow">
                   <div className="w-32 h-32 bg-white/70 backdrop-blur-md rounded-[2.5rem] flex items-center justify-center shadow-soft border border-white">
                     <svg className="w-16 h-16 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -790,9 +810,9 @@ const UserDashboard = () => {
               </div>
             </div>
           ) : (
-            <div className="glass-panel overflow-hidden relative rounded-3xl p-8 bg-gradient-to-br from-green-50/80 to-emerald-50/40 border border-white/60">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
+            <div className="glass-panel overflow-hidden relative rounded-3xl p-6 sm:p-8 bg-gradient-to-br from-green-50/80 to-emerald-50/40 border border-white/60">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+                <div className="flex-1 text-center sm:text-left">
                   <h2 className="text-2xl font-bold mb-2">
                     ¡Evaluación completada!
                   </h2>
@@ -800,22 +820,22 @@ const UserDashboard = () => {
                     Has completado tu evaluación emocional. Hemos encontrado
                     un profesional especializado para ti.
                   </p>
-                  <div className="flex space-x-4">
+                  <div className="flex flex-col sm:flex-row gap-3">
                     <button
                       onClick={handleViewResults}
-                      className="bg-white text-green-600 px-6 py-3 rounded-lg font-medium hover:bg-green-50 transition-colors duration-200 shadow-lg"
+                      className="bg-white text-green-600 px-6 py-3 rounded-lg font-medium hover:bg-green-50 transition-colors duration-200 shadow-lg w-full sm:w-auto text-center"
                     >
                       Ver Mis Evaluaciones
                     </button>
                     <button
                       onClick={handleStartEvaluation}
-                      className="bg-white bg-opacity-20 text-white px-6 py-3 rounded-lg font-medium hover:bg-opacity-30 transition-colors duration-200 border border-white border-opacity-30"
+                      className="bg-white bg-opacity-20 text-white px-6 py-3 rounded-lg font-medium hover:bg-opacity-30 transition-colors duration-200 border border-white border-opacity-30 w-full sm:w-auto text-center"
                     >
                       Nueva Evaluación
                     </button>
                   </div>
                 </div>
-                <div className="ml-8">
+                <div className="hidden sm:block ml-8">
                   <div className="w-24 h-24 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
                     <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -828,8 +848,8 @@ const UserDashboard = () => {
         </div>
 
         {/* Estadísticas del usuario */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-lg p-6">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-8">
+          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
             <div className="flex items-center">
               <div className="p-3 bg-blue-100 rounded-lg">
                 <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -845,7 +865,7 @@ const UserDashboard = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-lg p-6">
+          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
             <div className="flex items-center">
               <div className="p-3 bg-green-100 rounded-lg">
                 <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -861,7 +881,7 @@ const UserDashboard = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-lg p-6">
+          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
             <div className="flex items-center">
               <div className="p-3 bg-purple-100 rounded-lg">
                 <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -877,7 +897,7 @@ const UserDashboard = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-lg p-6">
+          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
             <div className="flex items-center">
               <div className="p-3 bg-orange-100 rounded-lg">
                 <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -896,7 +916,7 @@ const UserDashboard = () => {
 
         {/* Acciones rápidas */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="bg-white rounded-xl shadow-lg p-8">
+          <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8">
             <h3 className="text-xl font-bold text-gray-900 mb-6">Acciones Rápidas</h3>
             <div className="space-y-4">
               <button
@@ -946,7 +966,7 @@ const UserDashboard = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-lg p-8">
+          <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8">
             <h3 className="text-xl font-bold text-gray-900 mb-6">Información del Perfil</h3>
             <div className="space-y-4">
               <div className="flex justify-between items-center py-2 border-b border-gray-200">
@@ -981,7 +1001,7 @@ const UserDashboard = () => {
 
         {/* Información de Atención y Progreso */}
         {userStats?.careStatus && (
-          <div className="bg-white rounded-xl shadow-lg p-8 mt-8">
+          <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8 mt-8">
             <h3 className="text-xl font-bold text-gray-900 mb-6">Estado de Atención</h3>
             <div className="space-y-4">
               <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -1014,7 +1034,7 @@ const UserDashboard = () => {
 
         {/* Progreso de Sesiones desde userTestResults */}
         {sessionProgress.length > 0 && (
-          <div className="bg-white rounded-xl shadow-lg p-8 mt-8">
+          <div id="progreso-sesiones" className="bg-white rounded-xl shadow-lg p-6 sm:p-8 mt-8">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-bold text-gray-900">Progreso de Sesiones</h3>
               {sessionProgress.filter(progress => progress.sessionData).length > 4 && (

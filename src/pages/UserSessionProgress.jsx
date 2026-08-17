@@ -90,7 +90,7 @@ const UserSessionProgress = () => {
   const filteredProgress = sessionProgress.filter(progress => progress.sessionData);
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-gray-50 py-8 pb-20 md:pb-8">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">

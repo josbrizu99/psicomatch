@@ -32,6 +32,8 @@ const ConversationsList = ({ conversations, selectedConversation, onSelectConver
                     const otherUserId = conversation.participants.find(id => id !== currentUserId);
                     const unreadCount = conversation.unreadCount?.[currentUserId] || 0;
                     const isSelected = selectedConversation?.id === conversation.id;
+                    const photo = conversation.professionalPhoto || conversation.userPhoto;
+                    const name = conversation.professionalName || conversation.userName || 'Usuario';
 
                     return (
                         <div
@@ -42,19 +44,23 @@ const ConversationsList = ({ conversations, selectedConversation, onSelectConver
                                     : 'hover:bg-gray-50'
                                 }`}
                         >
-                            <div className="flex items-start space-x-3">
+                            <div className="flex items-center space-x-3">
                                 {/* Avatar */}
-                                <div className="flex-shrink-0">
-                                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-500 to-secondary-500 flex items-center justify-center text-white font-semibold">
-                                        {conversation.professionalName?.charAt(0) || conversation.userName?.charAt(0) || '?'}
-                                    </div>
+                                <div className="flex-shrink-0 relative">
+                                    {photo ? (
+                                        <img src={photo} alt={name} className="w-12 h-12 rounded-full object-cover shadow-sm border border-gray-100" />
+                                    ) : (
+                                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-500 to-secondary-500 flex items-center justify-center text-white font-semibold shadow-sm text-lg">
+                                            {name.charAt(0)}
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Content */}
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center justify-between mb-1">
                                         <h3 className="text-sm font-semibold text-gray-900 truncate">
-                                            {conversation.professionalName || conversation.userName || 'Usuario'}
+                                            {name}
                                         </h3>
                                         {conversation.lastMessageAt && (
                                             <span className="text-xs text-gray-500">

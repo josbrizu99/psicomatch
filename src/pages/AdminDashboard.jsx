@@ -23,6 +23,7 @@ const AdminDashboard = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [adminNotifications, setAdminNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
 
   const handleSectionChange = (sectionId) => {
@@ -184,8 +185,17 @@ const AdminDashboard = () => {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="flex items-center justify-between px-6 py-4">
-          <div className="flex items-center space-x-4">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
+          <div className="flex items-center space-x-3 sm:space-x-4">
+            {/* Botón hamburguesa - solo móvil */}
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
             <Link
               to="/"
               className="flex items-center space-x-2 group"
@@ -195,7 +205,7 @@ const AdminDashboard = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                 </svg>
               </div>
-              <span className="text-xl font-bold text-teal-700">
+              <span className="text-lg sm:text-xl font-bold text-teal-700">
                 Psicomatch Admin
               </span>
             </Link>
@@ -325,12 +335,17 @@ const AdminDashboard = () => {
         </div>
       </header>
 
-      <div className="flex relative min-h-[calc(100vh-80px)]">
+      <div className="flex relative min-h-[calc(100vh-64px)] sm:min-h-[calc(100vh-80px)]">
         {/* Sidebar */}
-        <AdminSidebar activeSection={activeSection} onSectionChange={handleSectionChange} />
+        <AdminSidebar
+          activeSection={activeSection}
+          onSectionChange={handleSectionChange}
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+        />
 
         {/* Main Content */}
-        <main className="flex-1 p-6 relative z-10 overflow-auto">
+        <main className="flex-1 p-3 sm:p-4 md:p-6 relative z-10 overflow-auto w-full">
           <div className="min-h-full">
             {renderContent}
           </div>
@@ -339,8 +354,8 @@ const AdminDashboard = () => {
 
       {/* Modal de confirmación de logout */}
       {showLogoutModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 shadow-lg max-w-sm mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-5 sm:p-6 shadow-xl w-full max-w-sm">
             <div className="flex items-center space-x-3 mb-4">
               <div className="flex-shrink-0">
                 <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
