@@ -1340,7 +1340,7 @@ const UserDashboard = () => {
       {/* Modal de confirmación para nueva evaluación */}
       {showConfirmModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
+          <div className="glass-panel p-6 sm:p-8 rounded-[1.5rem] shadow-2xl max-w-md w-full animate-fade-in-up relative overflow-hidden">
             <div className="mb-4">
               <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1358,13 +1358,13 @@ const UserDashboard = () => {
             <div className="flex space-x-3">
               <button
                 onClick={handleCancelNewEvaluation}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex-1 px-4 py-3 border border-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-400 transition-all duration-200 bg-white/60"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleConfirmNewEvaluation}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="flex-1 px-4 py-3 bg-primary-600 text-white font-medium rounded-xl hover:bg-primary-700 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-300 shadow-[0_4px_14px_0_rgba(20,184,166,0.39)]"
               >
                 Sí, continuar
               </button>

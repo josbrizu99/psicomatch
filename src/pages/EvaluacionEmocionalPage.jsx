@@ -401,9 +401,9 @@ const EvaluacionEmocionalPage = () => {
   if (currentStep === 'welcome') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-2xl mx-auto text-center">
-          <div className="bg-white rounded-xl shadow-lg p-12">
-            <div className="mb-8">
+        <div className="max-w-2xl mx-auto text-center relative z-10 animate-fade-in-up">
+          <div className="glass-panel p-8 sm:p-12 rounded-[2rem] shadow-2xl relative overflow-hidden">
+            <div className="mb-8 relative z-10">
               <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-primary-100 mb-4">
                 <svg className="h-8 w-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -450,7 +450,7 @@ const EvaluacionEmocionalPage = () => {
                   console.log('🎯 BOTÓN CLICKEADO - Empezar Evaluación Emocional');
                   handleStartEvaluation();
                 }}
-                className="w-full inline-flex items-center justify-center px-8 py-4 border border-transparent text-lg font-medium rounded-lg text-white bg-gradient-to-r from-primary-600 to-secondary-600 hover:from-primary-700 hover:to-secondary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-all duration-200 shadow-lg"
+                className="group relative w-full inline-flex items-center justify-center px-8 py-4 border border-transparent text-lg font-medium rounded-xl text-white bg-primary-600 hover:bg-primary-700 hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-all duration-300 shadow-[0_4px_14px_0_rgba(20,184,166,0.39)]"
               >
                 <svg className="h-6 w-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -460,9 +460,9 @@ const EvaluacionEmocionalPage = () => {
 
               <button
                 onClick={() => navigate('/dashboard')}
-                className="w-full inline-flex items-center justify-center px-6 py-3 border border-gray-300 text-base font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors duration-200"
+                className="w-full inline-flex items-center justify-center px-6 py-3 border border-gray-200 text-base font-medium rounded-xl text-gray-700 bg-white/60 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-400 transition-all duration-200 shadow-sm"
               >
-                <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-5 w-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
                 Ir a mi Panel Principal
@@ -475,7 +475,7 @@ const EvaluacionEmocionalPage = () => {
         {/* Modal de confirmación para nueva evaluación */}
         {showConfirmModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
+          <div className="glass-panel p-6 sm:p-8 rounded-[1.5rem] shadow-2xl max-w-md w-full animate-fade-in-up relative overflow-hidden">
               <div className="mb-4">
                 <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -493,13 +493,13 @@ const EvaluacionEmocionalPage = () => {
               <div className="flex space-x-3">
                 <button
                   onClick={handleCancelNewEvaluation}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="flex-1 px-4 py-3 border border-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-400 transition-all duration-200 bg-white/60"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={handleConfirmNewEvaluation}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="flex-1 px-4 py-3 bg-primary-600 text-white font-medium rounded-xl hover:bg-primary-700 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-300 shadow-[0_4px_14px_0_rgba(20,184,166,0.39)]"
                 >
                   Sí, continuar
                 </button>
@@ -952,7 +952,7 @@ const EvaluacionEmocionalPage = () => {
       {/* Modal de confirmación para nueva evaluación */}
       {showConfirmModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
+          <div className="glass-panel p-6 sm:p-8 rounded-[1.5rem] shadow-2xl max-w-md w-full animate-fade-in-up relative overflow-hidden">
             <div className="mb-4">
               <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -970,13 +970,13 @@ const EvaluacionEmocionalPage = () => {
             <div className="flex space-x-3">
               <button
                 onClick={handleCancelNewEvaluation}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex-1 px-4 py-3 border border-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-400 transition-all duration-200 bg-white/60"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleConfirmNewEvaluation}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="flex-1 px-4 py-3 bg-primary-600 text-white font-medium rounded-xl hover:bg-primary-700 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-300 shadow-[0_4px_14px_0_rgba(20,184,166,0.39)]"
               >
                 Sí, continuar
               </button>

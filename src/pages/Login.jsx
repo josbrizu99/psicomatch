@@ -4,6 +4,7 @@ import { loginUser, loginWithGoogle, handleGoogleRedirect } from '../services/au
 import { useAuth } from '../contexts/AuthContext';
 import { is2FAEnabled } from '../services/twoFactorService';
 import TwoFactorModal from '../components/common/TwoFactorModal';
+import ForgotPasswordModal from '../components/common/ForgotPasswordModal';
 import { logoutUser } from '../services/authService';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/firebase';
@@ -16,6 +17,7 @@ const Login = () => {
   const [error, setError] = useState('');
   const [show2FA, setShow2FA] = useState(false);
   const [pendingUser, setPendingUser] = useState(null);
+  const [showResetModal, setShowResetModal] = useState(false);
   const [loginInProgress, setLoginInProgress] = useState(false);
   const navigate = useNavigate();
   const { isUserAdmin, currentUser, userData, loading: authLoading } = useAuth();
@@ -207,6 +209,13 @@ const Login = () => {
         />
       )}
 
+      {/* Modal de Recuperación de Contraseña */}
+      <ForgotPasswordModal
+        isOpen={showResetModal}
+        onClose={() => setShowResetModal(false)}
+        defaultEmail={formData.email}
+      />
+
       <div className="min-h-screen bg-gradient-to-br from-surface-off via-primary-50 to-secondary-50 flex items-center justify-center py-8 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
         {/* Decorative blobs */}
         <div className="absolute top-[-10%] left-[-10%] w-64 h-64 sm:w-96 sm:h-96 bg-primary-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-float-slow" />
@@ -292,7 +301,12 @@ const Login = () => {
                     <input type="checkbox" className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded" disabled={loading || googleLoading} />
                     <span className="text-sm text-gray-700">Recordarme</span>
                   </label>
-                  <button type="button" className="text-sm font-medium text-primary-600 hover:text-primary-500" disabled={loading || googleLoading}>
+                  <button 
+                    type="button" 
+                    className="text-sm font-medium text-primary-600 hover:text-primary-500" 
+                    disabled={loading || googleLoading}
+                    onClick={() => setShowResetModal(true)}
+                  >
                     ¿Olvidaste tu contraseña?
                   </button>
                 </div>

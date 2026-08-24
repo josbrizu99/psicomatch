@@ -232,6 +232,15 @@ export const findMatchingProfessional = async (userId, testSpecialties, userResu
       const userDoc = await getDoc(doc(db, 'users', userId));
       const userData = userDoc.data();
 
+      // Extraer necesidades del usuario desde múltiples campos posibles
+      const specialtyNeeds = (
+        userResults?.recommendedSpecialties ||
+        userResults?.interpretation?.recommendedSpecialties ||
+        userResults?.specialties ||
+        userData?.recommendedSpecialties ||
+        []
+      ).filter(s => s && s.toString().trim() !== '');
+
       // Notificar al usuario
       const sendMatchUser = httpsCallable(functions, 'sendMatchNotificationUser');
       sendMatchUser({
@@ -240,7 +249,7 @@ export const findMatchingProfessional = async (userId, testSpecialties, userResu
         professionalName: selectedProfessional.fullName || selectedProfessional.name,
         professionalSpecialty: (selectedProfessional.specialities || [])[0] || 'Psicología General',
         compatibilityScore: selectedProfessional.compatibilityScore,
-      }).catch((e) => console.warn('⚠️ Email match usuario fallido:', e.message));
+      }).catch((e) => console.warn('Email match usuario fallido:', e.message));
 
       // Notificar al profesional
       const sendMatchProfessional = httpsCallable(functions, 'sendMatchNotificationProfessional');
@@ -248,10 +257,10 @@ export const findMatchingProfessional = async (userId, testSpecialties, userResu
         professionalEmail: selectedProfessional.email || selectedProfessional.contact?.email,
         professionalName: selectedProfessional.fullName || selectedProfessional.name,
         userName: userData?.name || 'usuario',
-        userSpecialtyNeeds: userResults?.recommendedSpecialties || [],
-      }).catch((e) => console.warn('⚠️ Email match profesional fallido:', e.message));
+        userSpecialtyNeeds: specialtyNeeds,
+      }).catch((e) => console.warn('Email match profesional fallido:', e.message));
     } catch (emailErr) {
-      console.warn('⚠️ Error al enviar emails de match:', emailErr.message);
+      console.warn('Error al enviar emails de match:', emailErr.message);
     }
 
     return { 

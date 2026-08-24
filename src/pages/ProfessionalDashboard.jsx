@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useProfessionalAuth } from '../contexts/ProfessionalAuthContext';
@@ -128,6 +128,8 @@ const ProfessionalDashboard = () => {
   const [activeChatId, setActiveChatId] = useState(null);
   const profId = professionalData?.id || professionalData?.uid || professionalData?.profId;
   const { conversations } = useConversations(profId);
+  // Ref para rastrear pacientes ya conocidos y detectar nuevos
+  const previousPatientIdsRef = useRef(new Set());
 
   // Verificar autenticación y redirigir si es necesario
   useEffect(() => {
@@ -141,24 +143,15 @@ const ProfessionalDashboard = () => {
 
     if (!authLoading) {
       if (!isUserProfessional) {
-        console.log('❌ Usuario no es profesional, redirigiendo a login');
         navigate('/professional-login');
       } else if (professionalData) {
         // Verificar estado del profesional
         const isActive = professionalData.status === 'active';
         const isVerified = professionalData.isVerified === true;
 
-        console.log('🔍 Verificando estado del profesional:', {
-          isActive,
-          isVerified,
-          status: professionalData.status
-        });
-
         if (!isActive) {
-          console.log('❌ Profesional inactivo, redirigiendo a login');
           navigate('/professional-login');
         } else if (!isVerified) {
-          console.log('❌ Profesional no verificado, redirigiendo a login');
           navigate('/professional-login');
         } else {
           // Actualizar lastActivityAt para reflejar actividad real
@@ -167,7 +160,7 @@ const ProfessionalDashboard = () => {
             updateDoc(doc(db, 'professionals', profDocId), {
               lastActivityAt: serverTimestamp(),
               updatedAt: serverTimestamp()
-            }).catch((err) => console.error('❌ Error al actualizar lastActivityAt del profesional:', err));
+            }).catch((err) => console.error('Error al actualizar lastActivityAt del profesional:', err));
           }
         }
       }
@@ -377,6 +370,45 @@ const ProfessionalDashboard = () => {
         totalPatients: assigned.length
       }));
 
+      // Detectar nuevos pacientes y generar notificaciones
+      const readNotifications = (() => {
+        try {
+          const stored = localStorage.getItem(`professional_read_notifications_${profId}`);
+          return stored ? new Set(JSON.parse(stored)) : new Set();
+        } catch { return new Set(); }
+      })();
+
+      const newPatients = assigned.filter(p => !previousPatientIdsRef.current.has(p.id));
+      if (newPatients.length > 0 && previousPatientIdsRef.current.size > 0) {
+        // Solo notificar si ya teníamos pacientes antes (evitar notificación en carga inicial)
+        setProfessionalNotifications(prev => {
+          const existingIds = new Set(prev.map(n => n.id));
+          const newNotifs = newPatients
+            .map(patient => {
+              const notifId = `new-patient-${patient.id}`;
+              if (existingIds.has(notifId) || readNotifications.has(notifId)) return null;
+              return {
+                id: notifId,
+                type: 'new_patient_assigned',
+                title: 'Nuevo paciente asignado',
+                message: `${patient.name || patient.email} ha sido asignado como tu paciente.`,
+                patient,
+                timestamp: patient.createdAt || new Date(),
+                read: false
+              };
+            })
+            .filter(Boolean);
+          if (newNotifs.length === 0) return prev;
+          return [...newNotifs, ...prev].sort((a, b) => {
+            const aTime = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(a.timestamp);
+            const bTime = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(b.timestamp);
+            return bTime - aTime;
+          });
+        });
+      }
+      // Actualizar ref con los pacientes actuales
+      previousPatientIdsRef.current = new Set(assigned.map(p => p.id));
+
       // Cargar estimaciones de sesiones desde Firestore
       const loadEstimations = async () => {
         const estimations = {};
@@ -390,7 +422,7 @@ const ProfessionalDashboard = () => {
               }
             }
           } catch (error) {
-            console.error(`Error cargando estimación para paciente ${patient.id}:`, error);
+            console.error(`Error cargando estimacion para paciente ${patient.id}:`, error);
           }
         }
         setEstimatedSessions(prev => ({ ...prev, ...estimations }));
@@ -1468,8 +1500,11 @@ const ProfessionalDashboard = () => {
                                 prev.map(n => n.id === notification.id ? { ...n, read: true } : n)
                               );
 
-                              // Si es una notificación de sesión, abrir la sesión o el modal correspondiente
-                              if (notification.type === 'send_meeting_details' && session) {
+                              // Si es notificación de nuevo paciente, ir a pestaña pacientes
+                              if (notification.type === 'new_patient_assigned') {
+                                setActiveTab('pacientes');
+                                setShowNotifications(false);
+                              } else if (notification.type === 'send_meeting_details' && session) {
                                 setSelectedSessionForDetails(session);
                                 setShowMeetingDetailsModal(true);
                                 setShowNotifications(false);
@@ -1485,11 +1520,16 @@ const ProfessionalDashboard = () => {
                                 <div className={`w-8 h-8 rounded-full flex items-center justify-center ${notification.type === 'professional_rated' ? 'bg-yellow-100' :
                                   notification.type === 'session_rated' ? 'bg-green-100' :
                                     notification.type === 'meeting_type_chosen' ? 'bg-blue-100' :
-                                      'bg-purple-100'
+                                      notification.type === 'new_patient_assigned' ? 'bg-emerald-100' :
+                                        'bg-purple-100'
                                   }`}>
                                   {notification.type === 'professional_rated' || notification.type === 'session_rated' ? (
                                     <svg className="w-4 h-4 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
                                       <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                    </svg>
+                                  ) : notification.type === 'new_patient_assigned' ? (
+                                    <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                                     </svg>
                                   ) : (
                                     <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1869,7 +1909,6 @@ const ProfessionalDashboard = () => {
                                   onClick={() => {
                                     setSelectedSession(session);
                                     setSessionNotes(session.notes || '');
-                                    setClosingSessionId(session.id);
                                   }}
                                   className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-semibold flex items-center justify-center transition-colors shadow-sm flex-1"
                                 >

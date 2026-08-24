@@ -205,15 +205,19 @@ exports.sendMatchNotificationProfessional = onCall(async (request) => {
 
   const {professionalEmail, professionalName, userName, userSpecialtyNeeds} = request.data;
 
+  const hasNeeds = Array.isArray(userSpecialtyNeeds)
+    ? userSpecialtyNeeds.length > 0
+    : (userSpecialtyNeeds && userSpecialtyNeeds.toString().trim() !== "");
+
   const html = baseTemplate(`
-    <h2 style="color:#111827;font-size:22px;font-weight:700;margin-bottom:8px;">Nuevo paciente asignado 👥</h2>
+    <h2 style="color:#111827;font-size:22px;font-weight:700;margin-bottom:8px;">Nuevo paciente asignado</h2>
     <p style="color:#4b5563;font-size:15px;">Hola <strong>${professionalName}</strong>, un nuevo usuario ha sido emparejado con vos según su perfil de necesidades.</p>
     ${infoBox(`
       <p style="margin:0 0 8px;color:#0f766e;font-weight:600;">Información del paciente:</p>
-      <p style="margin:0 0 4px;color:#4b5563;font-size:14px;">👤 <strong>Nombre:</strong> ${userName}</p>
-      ${userSpecialtyNeeds ? `<p style="margin:0;color:#4b5563;font-size:14px;">🎯 <strong>Necesidades:</strong> ${Array.isArray(userSpecialtyNeeds) ? userSpecialtyNeeds.join(", ") : userSpecialtyNeeds}</p>` : ""}
+      <p style="margin:0 0 4px;color:#4b5563;font-size:14px;"><strong>Nombre:</strong> ${userName}</p>
+      ${hasNeeds ? `<p style="margin:0;color:#4b5563;font-size:14px;"><strong>Necesidades:</strong> ${Array.isArray(userSpecialtyNeeds) ? userSpecialtyNeeds.join(", ") : userSpecialtyNeeds}</p>` : ""}
     `)}
-    <p style="color:#6b7280;font-size:14px;">Entrá al dashboard para ver el perfil del paciente y coordinar la primera sesión.</p>
+    <p style="color:#6b7280;font-size:14px;">Ingresá al dashboard para ver el perfil del paciente y coordinar la primera sesión.</p>
     <div style="text-align:center;">
       ${ctaButton(`${APP_URL}/professional-dashboard`, "Ir a mi Dashboard")}
     </div>
@@ -223,7 +227,7 @@ exports.sendMatchNotificationProfessional = onCall(async (request) => {
     await sendMail({to: professionalEmail, subject: "Nuevo paciente asignado en PsicoMatch", html});
     return {success: true};
   } catch (err) {
-    console.error("❌ Error:", err);
+    console.error("Error sending match notification to professional:", err);
     return {success: false};
   }
 });
