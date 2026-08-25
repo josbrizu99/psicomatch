@@ -1,5 +1,6 @@
-import { collection, query, where, limit, onSnapshot, orderBy } from 'firebase/firestore';
-import { db } from '../firebase/firebase';
+import { collection, query, where, limit, onSnapshot, orderBy, doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { db, messaging, auth } from '../firebase/firebase';
+import { getToken, onMessage } from 'firebase/messaging';
 
 class NotificationService {
   constructor() {
@@ -71,8 +72,69 @@ class NotificationService {
         
         // Listener para profesionales
         this.subscribeToProfessionals();
+
+        // Si el usuario está logueado, pedir permiso de push y escuchar foreground messages
+        this.setupPushNotifications();
       }
     }, 100);
+  }
+
+  // Configurar notificaciones push (FCM)
+  async setupPushNotifications() {
+    if (!messaging) return;
+    
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        const token = await getToken(messaging, { 
+          // Reemplaza con tu VAPID key si la tenés configurada en Firebase Console, de lo contrario funcionará con la config por defecto en algunos entornos.
+          // vapidKey: 'TU_VAPID_KEY_AQUI'
+        });
+        
+        if (token && auth.currentUser) {
+          console.log('✅ FCM Token obtenido. Guardando en perfil...', token);
+          
+          // Determine collection based on some logic or check both.
+          // For safety we can try to update both if we don't know the exact role here.
+          const userId = auth.currentUser.uid;
+          
+          try {
+            await updateDoc(doc(db, 'users', userId), {
+              fcmTokens: arrayUnion(token)
+            });
+          } catch (e) {
+            // Might be a professional
+            try {
+              await updateDoc(doc(db, 'professionals', userId), {
+                fcmTokens: arrayUnion(token)
+              });
+            } catch (err) {
+              console.log('User not found in users or professionals collection to save token.');
+            }
+          }
+        }
+        
+        // Listen for foreground messages
+        onMessage(messaging, (payload) => {
+          console.log('🔔 Foreground Push Notification received:', payload);
+          // Optional: Add it to in-app notifications
+          if (payload.notification) {
+            this.addNotifications([{
+              id: `push-${Date.now()}`,
+              type: 'push_notification',
+              data: {
+                title: payload.notification.title,
+                message: payload.notification.body
+              },
+              timestamp: new Date().toISOString(),
+              isRead: false
+            }]);
+          }
+        });
+      }
+    } catch (error) {
+      console.log('❌ Error setting up push notifications:', error);
+    }
   }
 
   // Limpiar listeners existentes

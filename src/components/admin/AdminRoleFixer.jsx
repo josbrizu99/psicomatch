@@ -20,15 +20,15 @@ const AdminRoleFixer = () => {
       setLoading(true);
       const userDocRef = doc(db, 'users', currentUser.uid);
       const userDocSnap = await getDoc(userDocRef);
-      
+
       if (userDocSnap.exists()) {
         setUserDoc({ id: userDocSnap.id, ...userDocSnap.data() });
       } else {
-        setMessage('❌ No se encontró el documento del usuario en Firestore');
+        setMessage(' No se encontró el documento del usuario en Firestore');
       }
     } catch (error) {
       console.error('Error al cargar documento del usuario:', error);
-      setMessage('❌ Error al cargar documento del usuario: ' + error.message);
+      setMessage(' Error al cargar documento del usuario: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -40,23 +40,23 @@ const AdminRoleFixer = () => {
     try {
       setLoading(true);
       const userDocRef = doc(db, 'users', currentUser.uid);
-      
+
       await updateDoc(userDocRef, {
         role: 'admin',
         updatedAt: new Date(),
         updatedBy: currentUser.uid
       });
 
-      setMessage('✅ Rol de administrador establecido correctamente. Recarga la página.');
-      
+      setMessage('Rol de administrador establecido correctamente. Recarga la página.');
+
       // Recargar la página después de 2 segundos
       setTimeout(() => {
         window.location.reload();
       }, 2000);
-      
+
     } catch (error) {
       console.error('Error al actualizar rol:', error);
-      setMessage('❌ Error al actualizar rol: ' + error.message);
+      setMessage(' Error al actualizar rol: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -74,7 +74,7 @@ const AdminRoleFixer = () => {
   return (
     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
       <h3 className="text-lg font-semibold text-blue-800 mb-4">🔧 Admin Role Fixer</h3>
-      
+
       <div className="space-y-4">
         <div>
           <h4 className="font-medium text-blue-700 mb-2">Información del Usuario:</h4>
@@ -100,10 +100,10 @@ const AdminRoleFixer = () => {
                   {loading ? 'Procesando...' : '🔧 Establecer como Administrador'}
                 </button>
               )}
-              
+
               {userDoc.role === 'admin' && (
                 <div className="bg-green-100 text-green-800 p-3 rounded">
-                  ✅ El usuario ya tiene rol de administrador
+                  El usuario ya tiene rol de administrador
                 </div>
               )}
             </div>
@@ -119,11 +119,10 @@ const AdminRoleFixer = () => {
         </button>
 
         {message && (
-          <div className={`p-3 rounded ${
-            message.includes('✅') ? 'bg-green-100 text-green-800' : 
-            message.includes('❌') ? 'bg-red-100 text-red-800' : 
-            'bg-blue-100 text-blue-800'
-          }`}>
+          <div className={`p-3 rounded ${message.includes('✅') ? 'bg-green-100 text-green-800' :
+              message.includes('❌') ? 'bg-red-100 text-red-800' :
+                'bg-blue-100 text-blue-800'
+            }`}>
             {message}
           </div>
         )}

@@ -4,13 +4,14 @@ import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 import { registerUser, loginWithGoogle, handleGoogleRedirect } from '../services/authService';
 import { useAuth } from '../contexts/AuthContext';
+import { functions } from '../firebase/firebase';
+import { httpsCallable } from 'firebase/functions';
 import TermsModal from '../components/common/TermsModal';
 
 const CrearCuenta = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    phone: '',
     password: '',
     confirmPassword: ''
   });
@@ -22,6 +23,13 @@ const CrearCuenta = () => {
   const [generalError, setGeneralError] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
+  
+  // States for Email Verification
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [verifying, setVerifying] = useState(false);
+  const [verificationError, setVerificationError] = useState('');
+  
   const navigate = useNavigate();
   const { currentUser } = useAuth();
 
@@ -100,14 +108,66 @@ const CrearCuenta = () => {
     setGeneralError('');
 
     try {
-      const result = await registerUser(formData.name, formData.email, formData.password, formData.phone);
-      if (!result.success) {
-        setGeneralError(result.error);
+      // 1. Verificar si el email ya existe en Firebase Auth
+      const checkEmailExists = httpsCallable(functions, 'checkEmailExists');
+      const { data: existsData } = await checkEmailExists({ email: formData.email });
+      
+      if (existsData.exists) {
+        setGeneralError('El correo electrónico ya está registrado.');
+        setLoading(false);
+        return;
       }
+
+      // 2. Generar y enviar código de verificación
+      const generateCode = httpsCallable(functions, 'generateRegistrationCode');
+      await generateCode({ email: formData.email });
+      
+      // Mostrar modal para ingresar el código
+      setShowVerificationModal(true);
     } catch (error) {
-      setGeneralError('Error inesperado. Intenta de nuevo.');
+      console.error(error);
+      if (error.code === 'functions/resource-exhausted') {
+         setGeneralError('Por favor, esperá un momento antes de pedir otro código.');
+      } else {
+         setGeneralError('Error enviando el código de verificación. Intenta de nuevo.');
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleVerifyCode = async (e) => {
+    e.preventDefault();
+    if (!verificationCode || verificationCode.length !== 6) {
+      setVerificationError('Ingresá el código de 6 dígitos.');
+      return;
+    }
+    
+    setVerifying(true);
+    setVerificationError('');
+    
+    try {
+      // 1. Verificar el código
+      const verifyCode = httpsCallable(functions, 'verifyRegistrationCode');
+      const { data } = await verifyCode({ email: formData.email, code: verificationCode });
+      
+      if (data.success) {
+        // 2. Crear cuenta de Firebase
+        const result = await registerUser(formData.name, formData.email, formData.password, '');
+        if (!result.success) {
+           setVerificationError(result.error);
+        } else {
+           setShowVerificationModal(false);
+           // registerUser will handle redirection or AuthContext will catch it
+        }
+      } else {
+        setVerificationError(`Código incorrecto. Intentos restantes: ${data.attemptsLeft}`);
+      }
+    } catch (error) {
+      console.error(error);
+      setVerificationError(error.message || 'Error verificando el código.');
+    } finally {
+      setVerifying(false);
     }
   };
 
@@ -214,23 +274,7 @@ const CrearCuenta = () => {
                   {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email}</p>}
                 </div>
 
-                {/* Teléfono con selector de país */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Teléfono <span className="text-gray-400 font-normal">(opcional)</span>
-                  </label>
-                  <div className={`phone-input-wrapper border rounded-xl overflow-hidden transition-colors ${errors.phone ? 'border-red-300' : 'border-gray-200 focus-within:ring-2 focus-within:ring-primary-400 focus-within:border-transparent'}`}>
-                    <PhoneInput
-                      international
-                      defaultCountry="PY"
-                      value={formData.phone}
-                      onChange={(val) => setFormData(prev => ({ ...prev, phone: val || '' }))}
-                      disabled={loading || googleLoading}
-                      className="w-full"
-                    />
-                  </div>
-                  {errors.phone && <p className="mt-1 text-xs text-red-600">{errors.phone}</p>}
-                </div>
+                {/* Phone removed to avoid duplication */}
 
                 {/* Password */}
                 <div>
@@ -368,6 +412,57 @@ const CrearCuenta = () => {
           }
         }}
       />
+      
+      {/* Verification Code Modal */}
+      {showVerificationModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 animate-fade-in-up">
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Verifica tu email</h3>
+            <p className="text-sm text-gray-500 mb-6">
+              Enviamos un código de 6 dígitos a <strong>{formData.email}</strong>. Ingresalo para completar tu registro.
+            </p>
+            
+            <form onSubmit={handleVerifyCode} className="space-y-4">
+              {verificationError && (
+                <div className="bg-red-50 text-red-700 text-sm p-3 rounded-lg border border-red-100">
+                  {verificationError}
+                </div>
+              )}
+              
+              <div>
+                <input
+                  type="text"
+                  maxLength={6}
+                  value={verificationCode}
+                  onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
+                  className="w-full px-4 py-3 text-center text-2xl tracking-widest border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent font-mono"
+                  placeholder="000000"
+                  disabled={verifying}
+                  required
+                />
+              </div>
+              
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowVerificationModal(false)}
+                  disabled={verifying}
+                  className="w-full px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={verifying || verificationCode.length !== 6}
+                  className="w-full px-4 py-2.5 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:bg-primary-400 disabled:cursor-not-allowed flex justify-center items-center gap-2"
+                >
+                  {verifying ? 'Verificando...' : 'Confirmar y Crear'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </>
   );
 };

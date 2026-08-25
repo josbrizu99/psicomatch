@@ -37,6 +37,7 @@ const ChatContainer = ({ userId, userType = 'user', initialConversationId = null
                     selectedConversation={selectedConversation}
                     onSelectConversation={setSelectedConversation}
                     currentUserId={userId}
+                    userType={userType}
                 />
             </div>
 
@@ -52,8 +53,12 @@ const ChatContainer = ({ userId, userType = 'user', initialConversationId = null
                             userType={userType}
                             recipientId={selectedConversation.participants?.find(id => id !== userId) ||
                                 (userType === 'user' ? selectedConversation.professionalId : selectedConversation.userId)}
-                            otherUserName={selectedConversation.professionalName || selectedConversation.userName || 'Usuario'}
-                            otherUserPhoto={selectedConversation.professionalPhoto || selectedConversation.userPhoto}
+                            otherUserName={userType === 'professional' 
+                                ? (selectedConversation.userName || 'Usuario') 
+                                : (selectedConversation.professionalName || 'Profesional')}
+                            otherUserPhoto={userType === 'professional' 
+                                ? selectedConversation.userPhoto 
+                                : selectedConversation.professionalPhoto}
                             onClose={() => setSelectedConversation(null)}
                         />
                     </>

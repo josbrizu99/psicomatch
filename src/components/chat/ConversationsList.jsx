@@ -2,7 +2,7 @@ import React from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 
-const ConversationsList = ({ conversations, selectedConversation, onSelectConversation, currentUserId }) => {
+const ConversationsList = ({ conversations, selectedConversation, onSelectConversation, currentUserId, userType }) => {
     if (!conversations || conversations.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center h-full p-8 text-center">
@@ -32,8 +32,9 @@ const ConversationsList = ({ conversations, selectedConversation, onSelectConver
                     const otherUserId = conversation.participants.find(id => id !== currentUserId);
                     const unreadCount = conversation.unreadCount?.[currentUserId] || 0;
                     const isSelected = selectedConversation?.id === conversation.id;
-                    const photo = conversation.professionalPhoto || conversation.userPhoto;
-                    const name = conversation.professionalName || conversation.userName || 'Usuario';
+                    const isProfessional = userType === 'professional';
+                    const photo = isProfessional ? conversation.userPhoto : conversation.professionalPhoto;
+                    const name = isProfessional ? (conversation.userName || 'Usuario') : (conversation.professionalName || 'Profesional');
 
                     return (
                         <div

@@ -20,7 +20,7 @@ class ChatService {
   /**
    * Crear una nueva conversación entre usuario y profesional
    */
-  async createConversation(userId, professionalId, userName = null, professionalName = null, sessionId = null) {
+  async createConversation(userId, professionalId, userName = null, professionalName = null, sessionId = null, userPhoto = null, professionalPhoto = null) {
     try {
       const conversationData = {
         participants: [userId, professionalId],
@@ -38,6 +38,8 @@ class ChatService {
 
       if (userName) conversationData.userName = userName;
       if (professionalName) conversationData.professionalName = professionalName;
+      if (userPhoto) conversationData.userPhoto = userPhoto;
+      if (professionalPhoto) conversationData.professionalPhoto = professionalPhoto;
 
       const conversationRef = await addDoc(collection(db, 'conversations'), conversationData);
 

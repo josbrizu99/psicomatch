@@ -339,7 +339,10 @@ const UserDashboard = () => {
           currentUser.uid,
           assignedProfessional.id,
           currentUser.displayName || userData?.name || 'Usuario',
-          assignedProfessional.name || assignedProfessional.displayName || 'Profesional'
+          assignedProfessional.name || assignedProfessional.displayName || 'Profesional',
+          null, // sessionId not needed for UserDashboard direct chat
+          currentUser.photoURL || userData?.photoURL || null,
+          assignedProfessional.photoURL || assignedProfessional.avatar || null
         );
         setActiveChatId(newConvId);
         toast.success('Conversación iniciada');
@@ -1638,7 +1641,7 @@ const UserDashboard = () => {
         title="Mensajes"
         size="xl"
       >
-        <div className="h-[600px]">
+        <div className="h-[75vh] min-h-[400px] max-h-[800px]">
           <ChatContainer userId={currentUser?.uid} userType="user" initialConversationId={activeChatId} />
         </div>
       </Modal>

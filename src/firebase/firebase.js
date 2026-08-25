@@ -3,6 +3,7 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { getFunctions } from 'firebase/functions';
+import { getMessaging } from 'firebase/messaging';
 
 // Configuración de Firebase
 const firebaseConfig = {
@@ -37,7 +38,7 @@ const validateConfig = (config) => {
 };
 
 // Inicializar Firebase con manejo de errores
-let app, auth, db, storage, functions;
+let app, auth, db, storage, functions, messaging;
 
 try {
     // Validar configuración
@@ -55,6 +56,12 @@ try {
     // Configurar auth para evitar errores de init.json
     if (auth) {
         auth.useDeviceLanguage();
+    }
+    
+    try {
+        messaging = getMessaging(app);
+    } catch (e) {
+        console.warn('⚠️ Firebase Messaging no está soportado en este entorno', e);
     }
     
     console.log('✅ Firebase inicializado correctamente');
@@ -100,5 +107,5 @@ if (!storage) {
 }
 
 // Exportar servicios
-export { auth, db, storage, functions };
+export { auth, db, storage, functions, messaging };
 export default app;

@@ -1311,7 +1311,10 @@ const ProfessionalDashboard = () => {
           patientId,
           profId,
           patient?.name || 'Paciente',
-          professionalData?.fullName || professionalData?.displayName || 'Profesional'
+          professionalData?.fullName || professionalData?.displayName || 'Profesional',
+          null, // sessionId
+          patient?.photoURL || patient?.avatar || null,
+          professionalData?.photoURL || professionalData?.avatar || null
         );
         setActiveChatId(newConvId);
         toast.success('Conversación iniciada');
@@ -1510,7 +1513,7 @@ const ProfessionalDashboard = () => {
                                 setShowNotifications(false);
                               } else if (session) {
                                 setSelectedSession(session);
-                                setSessionNotes(session.notes || '');
+                                setSessionNotes(session.notes === 'none' ? '' : (session.notes || ''));
                                 setShowNotifications(false);
                               }
                             }}
@@ -1908,7 +1911,7 @@ const ProfessionalDashboard = () => {
                                 <button
                                   onClick={() => {
                                     setSelectedSession(session);
-                                    setSessionNotes(session.notes || '');
+                                    setSessionNotes(session.notes === 'none' ? '' : (session.notes || ''));
                                   }}
                                   className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-semibold flex items-center justify-center transition-colors shadow-sm flex-1"
                                 >
@@ -2555,7 +2558,12 @@ const ProfessionalDashboard = () => {
                         Paciente: {patientMap[selectedSession.userId]?.name || patientMap[selectedSession.userId]?.email || 'N/A'}
                       </p>
                       <p className="text-xs text-gray-600 mt-1">
-                        Tipo: {selectedSession.sessionType || 'N/A'} | Progreso: {selectedSession.progress || 0}%
+                        Tipo: {{
+                          evaluation: 'Evaluación',
+                          therapy: 'Terapia',
+                          follow_up: 'Seguimiento',
+                          followup: 'Seguimiento'
+                        }[selectedSession.sessionType] || selectedSession.sessionType || 'N/A'} | Progreso: {selectedSession.progress || 0}%
                       </p>
                     </div>
                     <div className="text-right">
@@ -2565,7 +2573,12 @@ const ProfessionalDashboard = () => {
                           ? 'bg-blue-100 text-blue-700'
                           : 'bg-yellow-100 text-yellow-700'
                         }`}>
-                        {selectedSession.status || 'activa'}
+                        {{
+                          scheduled: 'Programada',
+                          completed: 'Completada',
+                          in_progress: 'En Progreso',
+                          cancelled: 'Cancelada'
+                        }[selectedSession.status] || selectedSession.status || 'Activa'}
                       </span>
                     </div>
                   </div>
@@ -2623,7 +2636,7 @@ const ProfessionalDashboard = () => {
                         key={template}
                         type="button"
                         onClick={() => setSessionNotes(prev => prev ? `${prev}\n${template}` : template)}
-                        className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded-md text-gray-700 transition-colors"
+                        className="px-3 py-1.5 text-xs font-medium bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-lg text-teal-800 transition-all shadow-sm"
                       >
                         {template}
                       </button>
@@ -2646,7 +2659,7 @@ const ProfessionalDashboard = () => {
                 <div className="flex space-x-3 mt-6">
                   <button
                     type="button"
-                    className="flex-1 inline-flex justify-center items-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:text-sm disabled:opacity-50"
+                    className="flex-1 inline-flex justify-center items-center rounded-lg border border-teal-200 shadow-sm px-4 py-2 bg-teal-50 text-base font-medium text-teal-700 hover:bg-teal-100 hover:border-teal-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transition-all sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={async () => {
                       try {
                         // Limpiar notas - no guardar si está vacío o es 'none'
@@ -2681,7 +2694,7 @@ const ProfessionalDashboard = () => {
                   </button>
                   <button
                     type="button"
-                    className="flex-1 inline-flex justify-center items-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:text-sm disabled:opacity-50"
+                    className="flex-1 inline-flex justify-center items-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-teal-600 text-base font-medium text-white hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transition-all sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={() => {
                       handleCompleteSession(selectedSession);
                     }}
@@ -2706,7 +2719,7 @@ const ProfessionalDashboard = () => {
                   </button>
                   <button
                     type="button"
-                    className="px-4 py-2 inline-flex justify-center rounded-md border border-gray-300 shadow-sm bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:text-sm"
+                    className="px-4 py-2 inline-flex justify-center items-center rounded-lg border border-gray-200 shadow-sm bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transition-all sm:text-sm"
                     onClick={() => {
                       setSelectedSession(null);
                       setSessionNotes('');
@@ -2746,18 +2759,43 @@ const ProfessionalDashboard = () => {
                         </p>
                       </div>
                     ) : (
-                      <select
-                        value={selectedPatientForSession}
-                        onChange={(e) => setSelectedPatientForSession(e.target.value)}
-                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900"
-                      >
-                        <option value="">Selecciona un paciente</option>
+                      <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-xl space-y-1 p-1 bg-gray-50/50 scrollbar-thin">
                         {patients.map((patient) => (
-                          <option key={patient.id} value={patient.id}>
-                            {patient.name || patient.email} {patient.careStatus === 'alta' ? '(Alta)' : ''}
-                          </option>
+                          <button
+                            key={patient.id}
+                            type="button"
+                            onClick={() => setSelectedPatientForSession(patient.id)}
+                            className={`w-full flex items-center justify-between p-2 rounded-lg transition-all ${
+                              selectedPatientForSession === patient.id 
+                                ? 'bg-teal-50 border border-teal-200 shadow-sm' 
+                                : 'hover:bg-white border border-transparent hover:border-gray-200 hover:shadow-sm'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
+                                selectedPatientForSession === patient.id ? 'bg-teal-600 text-white' : 'bg-teal-100 text-teal-700'
+                              }`}>
+                                {patient.name?.charAt(0) || 'P'}
+                              </div>
+                              <div className="text-left">
+                                <p className={`text-sm font-semibold ${selectedPatientForSession === patient.id ? 'text-teal-900' : 'text-gray-900'}`}>
+                                  {patient.name || patient.email}
+                                </p>
+                                <p className="text-[10px] text-gray-500">
+                                  {patient.careStatus === 'alta' ? 'Dado de Alta' : 'Activo'}
+                                </p>
+                              </div>
+                            </div>
+                            {selectedPatientForSession === patient.id && (
+                              <div className="text-teal-600">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                              </div>
+                            )}
+                          </button>
                         ))}
-                      </select>
+                      </div>
                     )}
                   </div>
                   {selectedPatientForSession && (() => {
@@ -3678,7 +3716,7 @@ const ProfessionalDashboard = () => {
         title="Mensajes"
         size="xl"
       >
-        <div className="h-[600px]">
+        <div className="h-[75vh] min-h-[400px] max-h-[800px]">
           <ChatContainer userId={profId} userType="professional" initialConversationId={activeChatId} />
         </div>
       </Modal>

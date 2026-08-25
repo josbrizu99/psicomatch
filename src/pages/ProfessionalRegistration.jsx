@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from '../firebase/firebase';
+import { auth, db, functions } from '../firebase/firebase';
+import { httpsCallable } from 'firebase/functions';
 import { useAuth } from '../contexts/AuthContext';
 import { sendProfessionalAccessCode } from '../services/emailService';
 import ImageUploader from '../components/common/ImageUploader';
@@ -60,6 +61,13 @@ const ProfessionalRegistration = () => {
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
+  // Verification Modal States
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [verifying, setVerifying] = useState(false);
+  const [verificationError, setVerificationError] = useState('');
+  
   const totalSteps = 5;
 
   const navigate = useNavigate();
@@ -231,6 +239,68 @@ const ProfessionalRegistration = () => {
 
   const handleConfirmSubmit = async () => {
     setShowConfirmModal(false);
+    setLoading(true);
+    setError('');
+
+    try {
+      // 1. Verificar si el email ya existe en Firebase Auth
+      const checkEmailExists = httpsCallable(functions, 'checkEmailExists');
+      const { data: existsData } = await checkEmailExists({ email: formData.email });
+      
+      if (existsData.exists) {
+        setError('El correo electrónico ya está registrado.');
+        setLoading(false);
+        return;
+      }
+
+      // 2. Generar y enviar código de verificación
+      const generateCode = httpsCallable(functions, 'generateRegistrationCode');
+      await generateCode({ email: formData.email });
+      
+      // Mostrar modal para ingresar el código
+      setShowVerificationModal(true);
+    } catch (error) {
+      console.error(error);
+      if (error.code === 'functions/resource-exhausted') {
+         setError('Por favor, esperá un momento antes de pedir otro código.');
+      } else {
+         setError('Error enviando el código de verificación. Intenta de nuevo.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyCode = async (e) => {
+    e.preventDefault();
+    if (!verificationCode || verificationCode.length !== 6) {
+      setVerificationError('Ingresá el código de 6 dígitos.');
+      return;
+    }
+    
+    setVerifying(true);
+    setVerificationError('');
+    
+    try {
+      // 1. Verificar el código
+      const verifyCode = httpsCallable(functions, 'verifyRegistrationCode');
+      const { data } = await verifyCode({ email: formData.email, code: verificationCode });
+      
+      if (data.success) {
+        setShowVerificationModal(false);
+        await createProfessionalAccount();
+      } else {
+        setVerificationError(`Código incorrecto. Intentos restantes: ${data.attemptsLeft}`);
+      }
+    } catch (error) {
+      console.error(error);
+      setVerificationError(error.message || 'Error verificando el código.');
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const createProfessionalAccount = async () => {
     setIsSubmitted(true);
     setLoading(true);
 
@@ -1064,10 +1134,7 @@ const ProfessionalRegistration = () => {
                   ¿Estás seguro de que todos los datos que proporcionas son correctos?
                 </p>
                 <p className="text-sm text-gray-500 mb-4">
-                  El administrador verificará tu perfil para su posterior verificación y te dará un código de acceso una vez aprobado tu perfil.
-                </p>
-                <p className="text-sm text-gray-500">
-                  ¿Deseas continuar con el registro?
+                  Enviaremos un código de verificación a tu correo para comprobar tu identidad.
                 </p>
               </div>
               <div className="items-center px-4 py-3">
@@ -1085,6 +1152,57 @@ const ProfessionalRegistration = () => {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Verificación de Código */}
+      {showVerificationModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 animate-fade-in-up">
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Verifica tu email</h3>
+            <p className="text-sm text-gray-500 mb-6">
+              Enviamos un código de 6 dígitos a <strong>{formData.email}</strong>. Ingresalo para completar tu registro profesional.
+            </p>
+            
+            <form onSubmit={handleVerifyCode} className="space-y-4">
+              {verificationError && (
+                <div className="bg-red-50 text-red-700 text-sm p-3 rounded-lg border border-red-100">
+                  {verificationError}
+                </div>
+              )}
+              
+              <div>
+                <input
+                  type="text"
+                  maxLength={6}
+                  value={verificationCode}
+                  onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
+                  className="w-full px-4 py-3 text-center text-2xl tracking-widest border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
+                  placeholder="000000"
+                  disabled={verifying}
+                  required
+                />
+              </div>
+              
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowVerificationModal(false)}
+                  disabled={verifying}
+                  className="w-full px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={verifying || verificationCode.length !== 6}
+                  className="w-full px-4 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-400 disabled:cursor-not-allowed flex justify-center items-center gap-2"
+                >
+                  {verifying ? 'Verificando...' : 'Confirmar y Crear'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

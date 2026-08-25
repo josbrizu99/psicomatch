@@ -84,9 +84,9 @@ export const useConversations = (userId) => {
     };
   }, [userId]);
 
-  const createConversation = async (professionalId, sessionId) => {
+  const createConversation = async (professionalId, sessionId, userName, professionalName, userPhoto, professionalPhoto) => {
     try {
-      const id = await chatService.createConversation(userId, professionalId, sessionId);
+      const id = await chatService.createConversation(userId, professionalId, userName, professionalName, sessionId, userPhoto, professionalPhoto);
       return id;
     } catch (err) {
       setError(err.message);

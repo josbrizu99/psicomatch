@@ -17,9 +17,9 @@ const ForgotPasswordModal = ({ isOpen, onClose, defaultEmail = '' }) => {
     setMessage('');
 
     try {
-      await sendPasswordResetEmail(auth, email);
+      await sendPasswordResetEmail(auth, email.trim());
       setStatus('success');
-      setMessage('Se ha enviado un enlace de recuperación a tu correo electrónico.');
+      setMessage('Se ha enviado un enlace de recuperación a tu correo electrónico. Por favor, revisa también tu carpeta de spam.');
     } catch (error) {
       console.error('Error enviando email de recuperación:', error);
       setStatus('error');
@@ -30,8 +30,11 @@ const ForgotPasswordModal = ({ isOpen, onClose, defaultEmail = '' }) => {
         case 'auth/invalid-email':
           setMessage('El formato del correo es inválido.');
           break;
+        case 'auth/too-many-requests':
+          setMessage('Has hecho demasiados intentos. Por favor, espera un momento y vuelve a intentarlo.');
+          break;
         default:
-          setMessage('Ocurrió un error. Por favor intenta de nuevo.');
+          setMessage('Ocurrió un error al intentar enviar el enlace. Por favor intenta de nuevo más tarde.');
       }
     }
   };

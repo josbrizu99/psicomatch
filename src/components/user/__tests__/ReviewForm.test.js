@@ -4,7 +4,7 @@ import '@testing-library/jest-dom';
 import ReviewForm from '../ReviewForm';
 
 // Mock de reviewService
-jest.mock('../../services/reviewService', () => ({
+jest.mock('../../../services/reviewService', () => ({
   createReview: jest.fn()
 }));
 
