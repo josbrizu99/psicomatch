@@ -136,3 +136,21 @@ export const isProfessional2FAEnabled = async (uid) => {
     return false;
   }
 };
+
+/**
+ * Habilita o deshabilita el 2FA para el profesional
+ * @param {string} uid - UID del profesional
+ * @param {boolean} enabled - true para habilitar, false para deshabilitar
+ */
+export const toggleProfessional2FA = async (uid, enabled) => {
+  try {
+    await updateDoc(doc(db, 'professionals', uid), {
+      twoFactorEnabled: enabled,
+      twoFactorUpdatedAt: serverTimestamp(),
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('❌ Error al cambiar 2FA del profesional:', error);
+    return { success: false, error: error.message };
+  }
+};

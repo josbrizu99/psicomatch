@@ -35,7 +35,7 @@ const SuicidalAlert = ({ onClose }) => {
           {/* Mensaje de apoyo */}
           <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
             <p className="text-green-800 text-sm">
-              <strong>Recuerda:</strong> Los pensamientos suicidas son temporales y con la ayuda adecuada puedes superarlos. 
+              <strong>Recuerda:</strong> Los pensamientos suicidas son temporales y con la ayuda adecuada puedes superarlos.
               Hablar con alguien es el primer paso hacia la recuperación.
             </p>
           </div>
@@ -46,9 +46,9 @@ const SuicidalAlert = ({ onClose }) => {
               onClick={() => window.open('tel:155', '_self')}
               className="w-full bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition-colors duration-200 font-semibold"
             >
-              📞 Llamar Línea de Crisis
+              Llamar Línea de Crisis
             </button>
-            
+
             <button
               onClick={onClose}
               className="w-full bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors duration-200"
@@ -60,7 +60,7 @@ const SuicidalAlert = ({ onClose }) => {
           {/* Información adicional */}
           <div className="mt-6 pt-4 border-t border-gray-200">
             <p className="text-xs text-gray-500">
-              Esta alerta se muestra cuando detectamos que podrías necesitar apoyo profesional. 
+              Esta alerta se muestra cuando detectamos que podrías necesitar apoyo profesional.
               La evaluación continuará después de cerrar esta ventana.
             </p>
           </div>

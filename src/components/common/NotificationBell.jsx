@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import notificationService from '../../services/notificationService';
+import { useAuth } from '../../contexts/AuthContext';
 
 const NotificationBell = () => {
   const [notifications, setNotifications] = useState([]);
@@ -8,14 +9,16 @@ const NotificationBell = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
 
   useEffect(() => {
     console.log('🔔 NotificationBell montado');
+    const isAdmin = currentUser?.role === 'admin';
 
     // Iniciar servicio con delay
     const initTimer = setTimeout(() => {
-      console.log('🚀 Iniciando servicio de notificaciones...');
-      notificationService.startListening();
+      console.log(`🚀 Iniciando servicio de notificaciones... (isAdmin: ${isAdmin})`);
+      notificationService.startListening(isAdmin);
       setIsLoading(false);
     }, 1000);
 
@@ -128,7 +131,7 @@ const NotificationBell = () => {
           </svg>
         ) : (
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5a6 6 0 00-10.5 5.7L3 21h18l-1.5-3.3A6 6 0 0015 12v5zM12 2a2 2 0 012 2v1a6 6 0 016 6v5l1.5 3H2.5L4 16v-5a6 6 0 016-6V4a2 2 0 012-2z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
           </svg>
         )}
 
@@ -142,7 +145,7 @@ const NotificationBell = () => {
 
       {/* Dropdown de notificaciones */}
       {showDropdown && (
-        <div className="absolute left-0 top-full mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+        <div className="fixed left-[5%] right-[5%] top-20 w-auto sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2 sm:w-80 bg-white rounded-lg shadow-xl border border-gray-200 z-50">
           <div className="p-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <div>

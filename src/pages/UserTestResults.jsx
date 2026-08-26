@@ -18,6 +18,7 @@ const UserTestResults = () => {
       navigate('/login');
       return;
     }
+    window.scrollTo(0, 0);
     loadUserResults();
   }, [currentUser, navigate]);
 
@@ -111,9 +112,12 @@ const UserTestResults = () => {
             </button>
             <button
               onClick={() => navigate('/dashboard')}
-              className="w-full bg-gray-200 text-gray-800 px-6 py-3 rounded-lg hover:bg-gray-300 transition-colors"
+              className="w-full flex items-center justify-center gap-2 text-gray-600 hover:text-gray-900 bg-white border border-gray-300 px-6 py-3 rounded-lg hover:bg-gray-50 transition-colors"
             >
-              Volver al Dashboard
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Volver al inicio
             </button>
           </div>
         </div>
@@ -133,9 +137,12 @@ const UserTestResults = () => {
             </div>
             <button
               onClick={() => navigate('/dashboard')}
-              className="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors"
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 bg-white border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors"
             >
-              Volver al Dashboard
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Volver al inicio
             </button>
           </div>
         </div>

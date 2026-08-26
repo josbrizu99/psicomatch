@@ -20,6 +20,7 @@ export const saveUserTestResults = async (userId, testData, answers, score, inte
       
       return {
         questionId: questionId,
+        questionText: question?.text || 'Pregunta no encontrada',
         answer: option?.text || 'No respondido',
         createdAt: new Date() // Usar Date() en lugar de serverTimestamp() para arrays
       };
@@ -31,6 +32,7 @@ export const saveUserTestResults = async (userId, testData, answers, score, inte
       testId: testData.id,
       testType: 'initial', // Tipo de evaluación inicial
       score: score,
+      interpretation: interpretation,
       answers: formattedAnswers,
       createdAt: serverTimestamp()
     };

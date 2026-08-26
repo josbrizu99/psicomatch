@@ -512,7 +512,7 @@ const UserDashboard = () => {
   };
 
   if (loading) {
-    return <PageLoader text="Cargando tu dashboard..." />;
+    return <PageLoader text="Cargando tu inicio..." />;
   }
 
   return (
@@ -534,130 +534,7 @@ const UserDashboard = () => {
               </p>
             </div>
             <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto">
-              {/* Icono de notificaciones */}
-              <div className="relative">
-                <button
-                  onClick={() => setShowNotifications(!showNotifications)}
-                  className="relative p-2 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-full transition-colors"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                  </svg>
-                  {notifications.filter(n => !n.read).length > 0 && (
-                    <span className="absolute top-0 right-0 block h-3 w-3 rounded-full bg-red-500 ring-2 ring-white"></span>
-                  )}
-                </button>
 
-                {/* Dropdown de notificaciones */}
-                {showNotifications && (
-                  <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-white rounded-lg shadow-lg z-50 border border-gray-200 max-h-96 overflow-y-auto">
-                    <div className="p-4 border-b border-gray-200">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="text-lg font-semibold text-gray-900">Notificaciones</h3>
-                          <p className="text-xs text-gray-500 mt-1">
-                            {notifications.filter(n => !n.read).length} sin leer
-                          </p>
-                        </div>
-                        {notifications.filter(n => !n.read).length > 0 && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              // Guardar todas las IDs como leídas en localStorage
-                              const readNotifications = getReadNotifications();
-                              notifications.forEach(n => {
-                                if (!n.read) {
-                                  readNotifications.add(n.id);
-                                }
-                              });
-                              saveReadNotifications(readNotifications);
-                              setNotifications(prev =>
-                                prev.map(n => ({ ...n, read: true }))
-                              );
-                              toast.success('Todas las notificaciones marcadas como leídas');
-                            }}
-                            className="text-xs text-primary-600 hover:text-primary-700 font-medium"
-                          >
-                            Marcar todas como leídas
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                    <div className="divide-y divide-gray-200">
-                      {notifications.length === 0 ? (
-                        <div className="p-4 text-center text-gray-500 text-sm">
-                          No hay notificaciones
-                        </div>
-                      ) : (
-                        notifications.map((notification) => (
-                          <div
-                            key={notification.id}
-                            className={`p-4 hover:bg-gray-50 cursor-pointer ${!notification.read ? 'bg-blue-50' : ''}`}
-                            onClick={() => {
-                              if (notification.type === 'session_choice_required') {
-                                setSelectedSessionForType(notification.session);
-                                setShowMeetingTypeModal(true);
-                                setShowNotifications(false);
-                              } else if (notification.type === 'session_details_received') {
-                                setSelectedSessionForDetails(notification.session);
-                                setShowSessionDetailsModal(true);
-                                setShowNotifications(false);
-                              }
-                              // Marcar como leída y guardar en localStorage
-                              const readNotifications = getReadNotifications();
-                              readNotifications.add(notification.id);
-                              saveReadNotifications(readNotifications);
-                              setNotifications(prev =>
-                                prev.map(n => n.id === notification.id ? { ...n, read: true } : n)
-                              );
-                            }}
-                          >
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <p className="text-sm font-medium text-gray-900">
-                                  {notification.title}
-                                </p>
-                                <p className="text-xs text-gray-600 mt-1">
-                                  {notification.message}
-                                </p>
-                                {notification.type === 'session_choice_required' && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSelectedSessionForType(notification.session);
-                                      setShowMeetingTypeModal(true);
-                                      setShowNotifications(false);
-                                    }}
-                                    className="mt-2 text-xs text-primary-600 hover:text-primary-700 font-medium"
-                                  >
-                                    Elegir tipo de sesión →
-                                  </button>
-                                )}
-                                {notification.type === 'session_details_received' && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSelectedSessionForDetails(notification.session);
-                                      setShowSessionDetailsModal(true);
-                                      setShowNotifications(false);
-                                    }}
-                                    className="mt-2 text-xs text-primary-600 hover:text-primary-700 font-medium"
-                                  >
-                                    Ver detalles →
-                                  </button>
-                                )}
-                              </div>
-                              {!notification.read && (
-                                <span className="ml-2 h-2 w-2 rounded-full bg-blue-500"></span>
-                              )}
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
               {userStats?.photoURL && (
                 <img
                   src={userStats.photoURL}
@@ -853,15 +730,15 @@ const UserDashboard = () => {
         {/* Estadísticas del usuario */}
         <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-8">
           <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
-            <div className="flex items-center">
-              <div className="p-3 bg-blue-100 rounded-lg">
+            <div className="flex flex-col sm:flex-row items-center sm:items-center">
+              <div className="p-2 sm:p-3 bg-blue-100 rounded-lg mb-2 sm:mb-0 shrink-0">
                 <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Evaluaciones</p>
-                <p className="text-2xl font-bold text-gray-900">
+              <div className="sm:ml-4 text-center sm:text-left overflow-hidden w-full">
+                <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Evaluaciones</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900">
                   {userStats?.evaluationsCompleted || 0}
                 </p>
               </div>
@@ -869,15 +746,15 @@ const UserDashboard = () => {
           </div>
 
           <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
-            <div className="flex items-center">
-              <div className="p-3 bg-green-100 rounded-lg">
+            <div className="flex flex-col sm:flex-row items-center sm:items-center">
+              <div className="p-2 sm:p-3 bg-green-100 rounded-lg mb-2 sm:mb-0 shrink-0">
                 <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Profesionales</p>
-                <p className="text-2xl font-bold text-gray-900">
+              <div className="sm:ml-4 text-center sm:text-left overflow-hidden w-full">
+                <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Profesionales</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900">
                   {userStats?.professionalMatches || 0}
                 </p>
               </div>
@@ -885,15 +762,15 @@ const UserDashboard = () => {
           </div>
 
           <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
-            <div className="flex items-center">
-              <div className="p-3 bg-purple-100 rounded-lg">
+            <div className="flex flex-col sm:flex-row items-center sm:items-center">
+              <div className="p-2 sm:p-3 bg-purple-100 rounded-lg mb-2 sm:mb-0 shrink-0">
                 <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Sesiones</p>
-                <p className="text-2xl font-bold text-gray-900">
+              <div className="sm:ml-4 text-center sm:text-left overflow-hidden w-full">
+                <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Sesiones</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900">
                   {sessions.filter(s => s.status === 'active' || s.status === 'in_progress' || s.status === 'scheduled').length}
                 </p>
               </div>
@@ -901,15 +778,15 @@ const UserDashboard = () => {
           </div>
 
           <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
-            <div className="flex items-center">
-              <div className="p-3 bg-orange-100 rounded-lg">
+            <div className="flex flex-col sm:flex-row items-center sm:items-center">
+              <div className="p-2 sm:p-3 bg-orange-100 rounded-lg mb-2 sm:mb-0 shrink-0">
                 <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Días activos</p>
-                <p className="text-2xl font-bold text-gray-900">
+              <div className="sm:ml-4 text-center sm:text-left overflow-hidden w-full">
+                <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Días activos</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900">
                   {userStats?.daysActive || 0}
                 </p>
               </div>
@@ -924,14 +801,14 @@ const UserDashboard = () => {
             <div className="space-y-4">
               <button
                 onClick={handleStartEvaluation}
-                className="w-full flex items-center p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors duration-200"
+                className="w-full flex items-center p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors duration-200 text-left"
               >
-                <div className="p-2 bg-blue-500 rounded-lg">
+                <div className="p-2 bg-blue-500 rounded-lg shrink-0">
                   <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <div className="ml-4">
+                <div className="ml-4 flex-1">
                   <p className="font-medium text-gray-900">Nueva Evaluación</p>
                   <p className="text-sm text-gray-600">Realiza una evaluación emocional</p>
                 </div>
@@ -939,14 +816,14 @@ const UserDashboard = () => {
 
               <button
                 onClick={handleViewResults}
-                className="w-full flex items-center p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors duration-200"
+                className="w-full flex items-center p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors duration-200 text-left"
               >
-                <div className="p-2 bg-green-500 rounded-lg">
+                <div className="p-2 bg-green-500 rounded-lg shrink-0">
                   <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
                 </div>
-                <div className="ml-4">
+                <div className="ml-4 flex-1">
                   <p className="font-medium text-gray-900">Ver Mis Evaluaciones</p>
                   <p className="text-sm text-gray-600">Historial de evaluaciones</p>
                 </div>
@@ -954,14 +831,14 @@ const UserDashboard = () => {
 
               <button
                 onClick={handleSearchProfessional}
-                className="w-full flex items-center p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors duration-200"
+                className="w-full flex items-center p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors duration-200 text-left"
               >
-                <div className="p-2 bg-purple-500 rounded-lg">
+                <div className="p-2 bg-purple-500 rounded-lg shrink-0">
                   <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
                 </div>
-                <div className="ml-4">
+                <div className="ml-4 flex-1">
                   <p className="font-medium text-gray-900">Buscar Profesionales</p>
                   <p className="text-sm text-gray-600">Encuentra psicólogos especializados</p>
                 </div>
@@ -1413,84 +1290,104 @@ const UserDashboard = () => {
       )}
 
       {/* Modal para elegir tipo de sesión */}
-      {showMeetingTypeModal && selectedSessionForType && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
-            <div className="mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Elegir Tipo de Sesión
-              </h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Tu profesional ha programado una sesión para{' '}
-                {selectedSessionForType.scheduledDate
-                  ? new Date(selectedSessionForType.scheduledDate + 'T00:00:00').toLocaleDateString('es-ES', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  })
-                  : ''}{' '}
-                {selectedSessionForType.scheduledTime ? `a las ${selectedSessionForType.scheduledTime}` : ''}.
-                Por favor, elige cómo deseas realizar la sesión:
-              </p>
-            </div>
+      {showMeetingTypeModal && selectedSessionForType && (() => {
+        const offersVirtual = assignedProfessional ? (assignedProfessional.online || assignedProfessional.hybrid || (!assignedProfessional.online && !assignedProfessional.hybrid && !assignedProfessional.inPerson)) : true;
+        const offersInPerson = assignedProfessional ? (assignedProfessional.inPerson || assignedProfessional.hybrid || (!assignedProfessional.online && !assignedProfessional.hybrid && !assignedProfessional.inPerson)) : true;
+        
+        return (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Elegir Tipo de Sesión
+                </h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Tu profesional ha programado una sesión para{' '}
+                  {selectedSessionForType.scheduledDate
+                    ? new Date(selectedSessionForType.scheduledDate + 'T00:00:00').toLocaleDateString('es-ES', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })
+                    : ''}{' '}
+                  {selectedSessionForType.scheduledTime ? `a las ${selectedSessionForType.scheduledTime}` : ''}.
+                  Por favor, elige cómo deseas realizar la sesión:
+                </p>
+              </div>
 
-            <div className="space-y-3 mb-6">
-              <button
-                onClick={() => setSelectedMeetingType('virtual')}
-                className={`w-full p-4 border-2 rounded-lg text-left transition-colors ${selectedMeetingType === 'virtual'
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-gray-200 hover:border-gray-300'
+              <div className="space-y-3 mb-6">
+                <button
+                  onClick={() => offersVirtual && setSelectedMeetingType('virtual')}
+                  disabled={!offersVirtual}
+                  className={`w-full p-4 border-2 rounded-lg text-left transition-colors ${
+                    !offersVirtual ? 'opacity-50 cursor-not-allowed bg-gray-50 border-gray-200' :
+                    selectedMeetingType === 'virtual'
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-200 hover:border-gray-300'
                   }`}
-              >
-                <div className="flex items-center">
-                  <div className={`w-4 h-4 rounded-full border-2 mr-3 ${selectedMeetingType === 'virtual'
-                    ? 'border-blue-500 bg-blue-500'
-                    : 'border-gray-300'
-                    }`}>
-                    {selectedMeetingType === 'virtual' && (
-                      <div className="w-full h-full rounded-full bg-white scale-50"></div>
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className={`w-4 h-4 rounded-full border-2 mr-3 ${selectedMeetingType === 'virtual'
+                        ? 'border-blue-500 bg-blue-500'
+                        : 'border-gray-300'
+                        }`}>
+                        {selectedMeetingType === 'virtual' && (
+                          <div className="w-full h-full rounded-full bg-white scale-50"></div>
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">Virtual</p>
+                        <p className="text-xs text-gray-600">Videollamada (Meet, Zoom, etc.)</p>
+                      </div>
+                    </div>
+                    {!offersVirtual && (
+                      <span className="text-[10px] bg-gray-200 text-gray-600 px-2 py-1 rounded-full font-medium">No disponible</span>
                     )}
                   </div>
-                  <div>
-                    <p className="font-medium text-gray-900">Virtual</p>
-                    <p className="text-xs text-gray-600">Videollamada (Meet, Zoom, etc.)</p>
-                  </div>
-                </div>
-              </button>
+                </button>
 
-              <button
-                onClick={() => setSelectedMeetingType('presencial')}
-                className={`w-full p-4 border-2 rounded-lg text-left transition-colors ${selectedMeetingType === 'presencial'
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-gray-200 hover:border-gray-300'
+                <button
+                  onClick={() => offersInPerson && setSelectedMeetingType('presencial')}
+                  disabled={!offersInPerson}
+                  className={`w-full p-4 border-2 rounded-lg text-left transition-colors ${
+                    !offersInPerson ? 'opacity-50 cursor-not-allowed bg-gray-50 border-gray-200' :
+                    selectedMeetingType === 'presencial'
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-200 hover:border-gray-300'
                   }`}
-              >
-                <div className="flex items-center">
-                  <div className={`w-4 h-4 rounded-full border-2 mr-3 ${selectedMeetingType === 'presencial'
-                    ? 'border-blue-500 bg-blue-500'
-                    : 'border-gray-300'
-                    }`}>
-                    {selectedMeetingType === 'presencial' && (
-                      <div className="w-full h-full rounded-full bg-white scale-50"></div>
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className={`w-4 h-4 rounded-full border-2 mr-3 ${selectedMeetingType === 'presencial'
+                        ? 'border-blue-500 bg-blue-500'
+                        : 'border-gray-300'
+                        }`}>
+                        {selectedMeetingType === 'presencial' && (
+                          <div className="w-full h-full rounded-full bg-white scale-50"></div>
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">Presencial</p>
+                        <p className="text-xs text-gray-600">En la clínica del profesional</p>
+                      </div>
+                    </div>
+                    {!offersInPerson && (
+                      <span className="text-[10px] bg-gray-200 text-gray-600 px-2 py-1 rounded-full font-medium">No disponible</span>
                     )}
                   </div>
-                  <div>
-                    <p className="font-medium text-gray-900">Presencial</p>
-                    <p className="text-xs text-gray-600">En la clínica del profesional</p>
-                  </div>
-                </div>
-              </button>
-            </div>
+                </button>
+              </div>
 
-            <div className="flex space-x-3">
-              <button
-                onClick={() => {
-                  setShowMeetingTypeModal(false);
-                  setSelectedSessionForType(null);
-                  setSelectedMeetingType('');
-                }}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => {
+                    setShowMeetingTypeModal(false);
+                    setSelectedSessionForType(null);
+                    setSelectedMeetingType('');
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 Cancelar
               </button>
@@ -1504,7 +1401,8 @@ const UserDashboard = () => {
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* Modal de Detalles de Sesión */}
       {showSessionDetailsModal && selectedSessionForDetails && (

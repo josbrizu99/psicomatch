@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useProfessionalAuth } from '../../contexts/ProfessionalAuthContext';
 import { logoutUser } from '../../services/authService';
-
+import NotificationBell from './NotificationBell';
 const Navbar = () => {
   const { currentUser, isUserAdmin, userData } = useAuth();
   const { isUserProfessional } = useProfessionalAuth();
@@ -116,8 +116,10 @@ const Navbar = () => {
           {/* Lado derecho */}
           <div className="flex items-center space-x-2 sm:space-x-4">
             {currentUser ? (
-              /* ── Usuario logueado: solo dropdown, sin hamburguesa ── */
-              <div className="relative" ref={userMenuRef}>
+              /* ── Usuario logueado: campana + dropdown ── */
+              <div className="flex items-center space-x-2 sm:space-x-4">
+                <NotificationBell />
+                <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                   className="flex items-center space-x-2 sm:space-x-3 p-1.5 sm:p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -235,6 +237,7 @@ const Navbar = () => {
                     </div>
                   </div>
                 )}
+              </div>
               </div>
             ) : (
               /* ── Sin usuario: botones de auth + hamburguesa mobile ── */

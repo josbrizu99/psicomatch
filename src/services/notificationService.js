@@ -52,13 +52,13 @@ class NotificationService {
   }
 
   // Iniciar listeners en tiempo real
-  startListening() {
+  startListening(isAdmin = false) {
     if (this.isListening) {
       console.log('⚠️ Ya está escuchando, evitando duplicados');
       return;
     }
 
-    console.log('🚀 Iniciando listeners de notificaciones...');
+    console.log(`🚀 Iniciando listeners de notificaciones... (isAdmin: ${isAdmin})`);
     this.isListening = true;
     
     // Limpiar listeners existentes primero
@@ -67,11 +67,13 @@ class NotificationService {
     // Pequeño delay para asegurar que los listeners anteriores se cierren
     setTimeout(() => {
       if (this.isListening) {
-        // Listener para usuarios
-        this.subscribeToUsers();
-        
-        // Listener para profesionales
-        this.subscribeToProfessionals();
+        if (isAdmin) {
+          // Listener para usuarios
+          this.subscribeToUsers();
+          
+          // Listener para profesionales
+          this.subscribeToProfessionals();
+        }
 
         // Si el usuario está logueado, pedir permiso de push y escuchar foreground messages
         this.setupPushNotifications();

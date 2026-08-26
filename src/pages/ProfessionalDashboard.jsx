@@ -17,6 +17,8 @@ import {
   sendMeetingDetailsNotification
 } from '../services/emailService';
 import { listenAssignedPatients } from '../services/professionalService';
+import { getUserTestHistory } from '../services/userTestResultsService';
+import { getEvaluationTestById } from '../services/evaluationTestService';
 import ChatButton from '../components/chat/ChatButton';
 import ChatContainer from '../components/chat/ChatContainer';
 import Modal from '../components/common/Modal';
@@ -95,12 +97,17 @@ const ProfessionalDashboard = () => {
   const [newSessionType, setNewSessionType] = useState('consultation');
   const [newSessionDate, setNewSessionDate] = useState('');
   const [newSessionTime, setNewSessionTime] = useState('');
+  const [newSessionMeetingType, setNewSessionMeetingType] = useState('');
   const [creatingSession, setCreatingSession] = useState(false);
   const [showDischargeModal, setShowDischargeModal] = useState(false);
   const [patientToDischarge, setPatientToDischarge] = useState(null);
   const [showSessionHistoryModal, setShowSessionHistoryModal] = useState(false);
   const [selectedPatientForHistory, setSelectedPatientForHistory] = useState(null);
   const [patientSessionHistory, setPatientSessionHistory] = useState([]);
+  const [showEvaluationModal, setShowEvaluationModal] = useState(false);
+  const [selectedPatientForEvaluation, setSelectedPatientForEvaluation] = useState(null);
+  const [patientLatestEvaluation, setPatientLatestEvaluation] = useState(null);
+  const [isFetchingEvaluation, setIsFetchingEvaluation] = useState(false);
   const [editingProfile, setEditingProfile] = useState(false);
   const [showMeetingDetailsModal, setShowMeetingDetailsModal] = useState(false);
   const [selectedSessionForDetails, setSelectedSessionForDetails] = useState(null);
@@ -130,6 +137,18 @@ const ProfessionalDashboard = () => {
   const { conversations } = useConversations(profId);
   // Ref para rastrear pacientes ya conocidos y detectar nuevos
   const previousPatientIdsRef = useRef(new Set());
+  const userMenuRef = useRef(null);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setIsUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Verificar autenticación y redirigir si es necesario
   useEffect(() => {
@@ -988,22 +1007,21 @@ const ProfessionalDashboard = () => {
       return;
     }
 
-    // Validar que no haya sesiones programadas o activas en la misma fecha/hora
+    // Validar que el profesional no tenga NINGUNA sesión (con cualquier paciente) en esa fecha y hora
     const scheduledSessions = sessions.filter(
-      s => s.userId === selectedPatientForSession &&
-        (s.status === 'scheduled' || s.status === 'active' || s.status === 'in_progress') &&
+      s => (s.status === 'scheduled' || s.status === 'active' || s.status === 'in_progress') &&
         s.scheduledDate === newSessionDate &&
         s.scheduledTime === newSessionTime
     );
 
     if (scheduledSessions.length > 0) {
-      toast.error('Ya existe una sesión programada para esta fecha y hora.');
+      toast.error('Ya tienes otra sesión programada para esta fecha y hora con un paciente. Por favor elige otro horario.');
       return;
     }
 
     try {
       setCreatingSession(true);
-      const result = await createUserSession(selectedPatientForSession, profId, newSessionType, newSessionDate, newSessionTime);
+      const result = await createUserSession(selectedPatientForSession, profId, newSessionType, newSessionDate, newSessionTime, newSessionMeetingType || null);
 
       if (result.success) {
         // Notificar al paciente
@@ -1427,7 +1445,7 @@ const ProfessionalDashboard = () => {
             </Link>
           </div>
 
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 sm:space-x-4">
             {/* Icono de Notificaciones */}
             <div className="relative">
               <button
@@ -1445,7 +1463,7 @@ const ProfessionalDashboard = () => {
 
               {/* Dropdown de notificaciones */}
               {showNotifications && (
-                <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                <div className="absolute right-0 mt-2 w-[280px] sm:w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50 origin-top-right">
                   <div className="p-4 border-b border-gray-200">
                     <div className="flex items-center justify-between">
                       <div>
@@ -1585,35 +1603,75 @@ const ProfessionalDashboard = () => {
               )}
             </div>
 
-            <div className="flex items-center space-x-3">
-              {professionalData?.photoURL ? (
-                <img
-                  src={professionalData.photoURL}
-                  alt={professionalData.fullName || professionalData.name}
-                  className="w-8 h-8 rounded-full object-cover border-2 border-gray-200"
-                />
-              ) : (
-                <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-semibold">
-                    {professionalData?.fullName?.charAt(0)?.toUpperCase() || professionalData?.name?.charAt(0)?.toUpperCase() || 'P'}
-                  </span>
+            <div className="relative" ref={userMenuRef}>
+              <button
+                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                className="flex items-center space-x-3 bg-white border border-gray-200 rounded-full py-1.5 pl-2 pr-4 hover:shadow-sm hover:border-gray-300 transition-all focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+              >
+                {professionalData?.photoURL ? (
+                  <img
+                    src={professionalData.photoURL}
+                    alt={professionalData.fullName || professionalData.name}
+                    className="w-8 h-8 rounded-full object-cover border-2 border-white shadow-sm"
+                  />
+                ) : (
+                  <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-full flex items-center justify-center shadow-sm">
+                    <span className="text-white text-sm font-semibold">
+                      {professionalData?.fullName?.charAt(0)?.toUpperCase() || professionalData?.name?.charAt(0)?.toUpperCase() || 'P'}
+                    </span>
+                  </div>
+                )}
+                <div className="hidden md:flex flex-col items-start">
+                  <p className="text-sm font-semibold text-gray-900 leading-tight">
+                    {professionalData?.fullName || professionalData?.name || 'Profesional'}
+                  </p>
+                  <p className="text-[10px] text-gray-500 font-medium leading-tight">Profesional</p>
+                </div>
+                <svg className={`hidden md:block w-4 h-4 text-gray-400 transition-transform duration-200 ${isUserMenuOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {isUserMenuOpen && (
+                <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50 animate-fade-in origin-top-right">
+                  <div className="px-4 py-3 border-b border-gray-50 md:hidden">
+                    <p className="text-sm font-semibold text-gray-900 truncate">
+                      {professionalData?.fullName || professionalData?.name || 'Profesional'}
+                    </p>
+                    <p className="text-xs text-gray-500 truncate">Profesional</p>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      navigate('/professional-settings');
+                    }}
+                    className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-colors"
+                  >
+                    <svg className="w-4 h-4 mr-3 text-gray-400 group-hover:text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Configuración
+                  </button>
+
+                  <div className="h-px bg-gray-100 my-1"></div>
+
+                  <button
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      setShowLogoutModal(true);
+                    }}
+                    className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                  >
+                    <svg className="w-4 h-4 mr-3 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                    Cerrar sesión
+                  </button>
                 </div>
               )}
-              <div className="hidden md:block">
-                <p className="text-sm font-medium text-gray-900">{professionalData?.fullName || professionalData?.name}</p>
-                <p className="text-xs text-gray-500">Profesional</p>
-              </div>
             </div>
-
-            <button
-              onClick={() => setShowLogoutModal(true)}
-              className="text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg p-2 transition-colors"
-              title="Cerrar sesión"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-            </button>
           </div>
         </div>
       </header>
@@ -1789,59 +1847,59 @@ const ProfessionalDashboard = () => {
                 </div>
 
                 {/* Stats Cards */}
-                <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
-                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 hover:shadow-md transition-shadow">
-                    <div className="flex items-center">
-                      <div className="p-2.5 rounded-lg bg-teal-50 text-teal-600">
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 sm:p-4 hover:shadow-md transition-shadow">
+                    <div className="flex flex-row items-center gap-3 sm:gap-4">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a4 4 0 118 0v4m-4 6v6m-4-6h8m-8 6h8" />
                         </svg>
                       </div>
-                      <div className="ml-3 sm:ml-4">
-                        <p className="text-xs sm:text-sm font-medium text-gray-500">Sesiones Totales</p>
-                        <p className="text-lg sm:text-2xl font-bold text-gray-900">{stats.totalSessions}</p>
+                      <div>
+                        <p className="text-[11px] sm:text-sm font-medium text-gray-500 leading-tight">Sesiones Totales</p>
+                        <p className="text-base sm:text-2xl font-bold text-gray-900">{stats.totalSessions}</p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 hover:shadow-md transition-shadow">
-                    <div className="flex items-center">
-                      <div className="p-2.5 rounded-lg bg-emerald-50 text-emerald-600">
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 sm:p-4 hover:shadow-md transition-shadow">
+                    <div className="flex flex-row items-center gap-3 sm:gap-4">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                         </svg>
                       </div>
-                      <div className="ml-3 sm:ml-4">
-                        <p className="text-xs sm:text-sm font-medium text-gray-500">Mis Pacientes</p>
-                        <p className="text-lg sm:text-2xl font-bold text-gray-900">{stats.totalPatients}</p>
+                      <div>
+                        <p className="text-[11px] sm:text-sm font-medium text-gray-500 leading-tight">Mis Pacientes</p>
+                        <p className="text-base sm:text-2xl font-bold text-gray-900">{stats.totalPatients}</p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 hover:shadow-md transition-shadow">
-                    <div className="flex items-center">
-                      <div className="p-2.5 rounded-lg bg-amber-50 text-amber-500">
-                        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 sm:p-4 hover:shadow-md transition-shadow">
+                    <div className="flex flex-row items-center gap-3 sm:gap-4">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-amber-50 text-amber-500 flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="currentColor" viewBox="0 0 20 20">
                           <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                         </svg>
                       </div>
-                      <div className="ml-3 sm:ml-4">
-                        <p className="text-xs sm:text-sm font-medium text-gray-500">Calificación</p>
-                        <p className="text-lg sm:text-2xl font-bold text-gray-900">{stats.averageRating}</p>
+                      <div>
+                        <p className="text-[11px] sm:text-sm font-medium text-gray-500 leading-tight">Calificación</p>
+                        <p className="text-base sm:text-2xl font-bold text-gray-900">{stats.averageRating}</p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 hover:shadow-md transition-shadow">
-                    <div className="flex items-center">
-                      <div className="p-2.5 rounded-lg bg-violet-50 text-violet-600">
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 sm:p-4 hover:shadow-md transition-shadow">
+                    <div className="flex flex-row items-center gap-3 sm:gap-4">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-violet-50 text-violet-600 flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                       </div>
-                      <div className="ml-3 sm:ml-4">
-                        <p className="text-xs sm:text-sm font-medium text-gray-500">Opiniones</p>
-                        <p className="text-lg sm:text-2xl font-bold text-gray-900">{stats.ratingCount}</p>
+                      <div>
+                        <p className="text-[11px] sm:text-sm font-medium text-gray-500 leading-tight">Opiniones</p>
+                        <p className="text-base sm:text-2xl font-bold text-gray-900">{stats.ratingCount}</p>
                       </div>
                     </div>
                   </div>
@@ -2099,12 +2157,64 @@ const ProfessionalDashboard = () => {
                                 </div>
                               </div>
 
-                              <div className="mt-4 flex flex-wrap gap-2 justify-end">
+                              <div className="mt-4 grid grid-cols-2 gap-2 justify-end">
                                 <button
                                   onClick={() => handleStartChatWithPatient(patient.id)}
                                   className="px-2.5 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1 shadow-sm transition-colors"
                                 >
-                                  💬 Chat
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                                  </svg>
+                                  Chat
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    setSelectedPatientForEvaluation(patient);
+                                    setShowEvaluationModal(true);
+                                    setIsFetchingEvaluation(true);
+                                    try {
+                                      const historyResult = await getUserTestHistory(patient.id);
+                                      if (historyResult && historyResult.success && historyResult.results?.length > 0) {
+                                        let evaluation = historyResult.results[0];
+                                        // Fetch original test to get question texts if they are missing
+                                        if (evaluation.testId && evaluation.answers?.some(a => !a.questionText)) {
+                                          try {
+                                            const originalTestResponse = await getEvaluationTestById(evaluation.testId);
+                                            if (originalTestResponse && originalTestResponse.success && originalTestResponse.test?.questions) {
+                                              const originalTest = originalTestResponse.test;
+                                              const questionMap = {};
+                                              originalTest.questions.forEach(q => {
+                                                questionMap[q.id] = q.text;
+                                              });
+                                              evaluation = {
+                                                ...evaluation,
+                                                answers: evaluation.answers.map(ans => ({
+                                                  ...ans,
+                                                  questionText: ans.questionText || questionMap[ans.questionId]
+                                                }))
+                                              };
+                                            }
+                                          } catch (err) {
+                                            console.error("Error fetching original test for questions:", err);
+                                          }
+                                        }
+                                        setPatientLatestEvaluation(evaluation);
+                                      } else {
+                                        setPatientLatestEvaluation(null);
+                                      }
+                                    } catch (error) {
+                                      console.error("Error fetching evaluation:", error);
+                                      setPatientLatestEvaluation(null);
+                                    } finally {
+                                      setIsFetchingEvaluation(false);
+                                    }
+                                  }}
+                                  className="px-2.5 py-1.5 border border-teal-200 bg-teal-50 hover:bg-teal-100 text-teal-700 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition-colors"
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                  </svg>
+                                  Evaluación
                                 </button>
                                 <button
                                   onClick={() => {
@@ -2114,7 +2224,7 @@ const ProfessionalDashboard = () => {
                                     setPatientSessionHistory(history);
                                     setShowSessionHistoryModal(true);
                                   }}
-                                  className="px-2.5 py-1.5 border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-lg text-xs font-semibold transition-colors"
+                                  className="px-2.5 py-1.5 border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-lg text-xs font-semibold transition-colors col-span-2 sm:col-span-1 text-center"
                                 >
                                   Ficha Clínica
                                 </button>
@@ -2124,7 +2234,7 @@ const ProfessionalDashboard = () => {
                                       setPatientToDischarge(patient);
                                       setShowDischargeModal(true);
                                     }}
-                                    className="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-xs font-semibold transition-colors"
+                                    className="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-xs font-semibold transition-colors col-span-2 sm:col-span-1 text-center"
                                   >
                                     Dar de Alta
                                   </button>
@@ -2138,7 +2248,7 @@ const ProfessionalDashboard = () => {
                                         toast.error('Error al reactivar paciente');
                                       }
                                     }}
-                                    className="px-2.5 py-1.5 bg-teal-50 hover:bg-teal-100 text-teal-700 rounded-lg text-xs font-semibold transition-colors"
+                                    className="px-2.5 py-1.5 bg-teal-50 hover:bg-teal-100 text-teal-700 rounded-lg text-xs font-semibold transition-colors col-span-2 sm:col-span-1 text-center"
                                   >
                                     Reactivar
                                   </button>
@@ -2164,7 +2274,7 @@ const ProfessionalDashboard = () => {
                     <button
                       onClick={handleSaveAvailability}
                       disabled={savingAvailability}
-                      className="px-4 py-2 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-300 text-white rounded-lg text-xs font-bold transition-all shadow-sm"
+                      className="hidden sm:block px-4 py-2 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-300 text-white rounded-lg text-xs font-bold transition-all shadow-sm"
                     >
                       {savingAvailability ? 'Guardando...' : 'Guardar Agenda'}
                     </button>
@@ -2370,6 +2480,18 @@ const ProfessionalDashboard = () => {
                         )}
                       </div>
                     </div>
+                  </div>
+
+                  {/* Botón Guardar en móvil (Abajo) */}
+                  <div className="mt-6 sm:hidden border-t border-gray-100 pt-5">
+                    <button
+                      onClick={handleSaveAvailability}
+                      disabled={savingAvailability}
+                      className="w-full px-4 py-3 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-300 text-white rounded-lg text-sm font-bold transition-all shadow-md flex justify-center items-center gap-2"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>
+                      {savingAvailability ? 'Guardando Cambios...' : 'Guardar Agenda'}
+                    </button>
                   </div>
                 </div>
               </div>
@@ -2886,10 +3008,29 @@ const ProfessionalDashboard = () => {
                       required
                     />
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Modalidad de la Sesión <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={newSessionMeetingType}
+                      onChange={(e) => setNewSessionMeetingType(e.target.value)}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900"
+                      required
+                    >
+                      <option value="" disabled>Seleccione una modalidad</option>
+                      {availability?.modalities?.online && <option value="virtual">Virtual</option>}
+                      {availability?.modalities?.inPerson && <option value="presencial">Presencial</option>}
+                    </select>
+                    {(!availability?.modalities?.online || !availability?.modalities?.inPerson) && (
+                      <p className="mt-1 text-xs text-gray-500">
+                        * Para agendar otros tipos de cita debes habilitar la modalidad en el apartado de agenda.
+                      </p>
+                    )}
+                  </div>
                   <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
                     <p className="text-xs text-blue-800">
-                      <strong>Nota:</strong> El paciente recibirá una notificación y deberá elegir si la sesión será virtual o presencial.
-                      Una vez que elija, podrás enviar el enlace de reunión o la ubicación de la clínica según corresponda.
+                      <strong>Nota:</strong> Al crear la sesión, se establecerá la modalidad elegida. Si la cita es virtual, posteriormente podrás agregar el enlace de la reunión.
                     </p>
                   </div>
                 </div>
@@ -2898,7 +3039,7 @@ const ProfessionalDashboard = () => {
                     type="button"
                     className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:col-start-2 sm:text-sm disabled:opacity-50"
                     onClick={handleCreateSession}
-                    disabled={creatingSession || !selectedPatientForSession || patients.length === 0 || !newSessionDate || !newSessionTime}
+                    disabled={creatingSession || !selectedPatientForSession || patients.length === 0 || !newSessionDate || !newSessionTime || !newSessionMeetingType}
                   >
                     {creatingSession ? 'Creando...' : 'Crear Sesión'}
                   </button>
@@ -2909,6 +3050,7 @@ const ProfessionalDashboard = () => {
                       setShowNewSessionModal(false);
                       setSelectedPatientForSession('');
                       setNewSessionType('consultation');
+                      setNewSessionMeetingType('');
                     }}
                   >
                     Cancelar
@@ -3421,6 +3563,113 @@ const ProfessionalDashboard = () => {
         )
       }
 
+      {/* Modal de Evaluación Emocional */}
+      {
+        showEvaluationModal && selectedPatientForEvaluation && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+            <div className="relative top-20 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
+              <div className="mt-3">
+                <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
+                  Evaluación Emocional Inicial
+                </h3>
+                {isFetchingEvaluation ? (
+                  <div className="flex justify-center p-6">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
+                  </div>
+                ) : patientLatestEvaluation ? (
+                  <div className="space-y-4">
+                    <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 flex items-start gap-2 mb-4">
+                      <svg className="w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <p className="text-xs text-blue-800">
+                        Por motivos de privacidad y protección de datos, únicamente se visualiza el resultado de la última evaluación emocional del paciente.
+                      </p>
+                    </div>
+                    <div className="bg-teal-50 p-4 rounded-lg border border-teal-100 flex flex-col md:flex-row justify-around">
+                      <div className="text-center mb-2 md:mb-0">
+                        <p className="text-sm font-semibold text-teal-900">Puntaje Total</p>
+                        <p className="text-2xl font-bold text-teal-700">
+                          {typeof patientLatestEvaluation.score === 'object' 
+                            ? patientLatestEvaluation.score?.totalScore 
+                            : (patientLatestEvaluation.score || 0)}
+                        </p>
+                      </div>
+                      {typeof patientLatestEvaluation.score === 'object' && patientLatestEvaluation.score?.percentage !== undefined && (
+                        <div className="text-center">
+                          <p className="text-sm font-semibold text-teal-900">Porcentaje</p>
+                          <p className="text-2xl font-bold text-teal-700">{patientLatestEvaluation.score.percentage}%</p>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                      <p className="text-sm font-semibold text-gray-900 mb-2">Interpretación</p>
+                      {typeof patientLatestEvaluation.interpretation === 'object' && patientLatestEvaluation.interpretation !== null ? (
+                        <div>
+                          <p className="text-sm font-medium text-blue-900">Nivel: {patientLatestEvaluation.interpretation.level}</p>
+                          <p className="text-sm text-gray-700 mt-1">{patientLatestEvaluation.interpretation.description}</p>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-700">{patientLatestEvaluation.interpretation || 'Sin interpretación detallada'}</p>
+                      )}
+                    </div>
+
+                    {/* Resumen de respuestas */}
+                    {patientLatestEvaluation.answers && patientLatestEvaluation.answers.length > 0 && (
+                      <div className="bg-white p-4 rounded-lg border border-gray-200">
+                        <p className="text-sm font-semibold text-gray-900 mb-3">Resumen de Respuestas</p>
+                        <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
+                          {patientLatestEvaluation.answers.map((ans, index) => (
+                            <div key={index} className="bg-gray-50 p-3 rounded-md border border-gray-100">
+                              <p className="text-xs font-medium text-gray-800 mb-1">{ans.questionText || `Pregunta ${index + 1}`}</p>
+                              <p className="text-xs text-teal-700 font-semibold flex items-center gap-1">
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                                {ans.answer}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {patientLatestEvaluation.specialties && (
+                      <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                        <p className="text-sm font-semibold text-gray-900 mb-1">Especialidades Recomendadas</p>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {patientLatestEvaluation.specialties.map((spec, index) => (
+                            <span key={index} className="px-2 py-1 bg-white border border-gray-200 rounded-md text-xs font-medium text-gray-600">
+                              {spec}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                    <p className="text-sm text-yellow-800">El paciente no tiene resultados de evaluación recientes.</p>
+                  </div>
+                )}
+                <div className="mt-5 sm:mt-6">
+                  <button
+                    type="button"
+                    className="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 sm:text-sm"
+                    onClick={() => {
+                      setShowEvaluationModal(false);
+                      setSelectedPatientForEvaluation(null);
+                      setPatientLatestEvaluation(null);
+                    }}
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      }
+
       {/* Modal de Historial Completo de Sesiones */}
       {
         showSessionHistoryModal && selectedPatientForHistory && (
@@ -3774,6 +4023,20 @@ const ProfessionalDashboard = () => {
               </svg>
             </div>
             <span className="text-[10px] font-semibold leading-tight">Reportes</span>
+          </button>
+
+          {/* Ajustes */}
+          <button
+            onClick={() => navigate('/professional-settings')}
+            className={`flex flex-col items-center justify-center flex-1 py-1 transition-all text-gray-400 hover:text-gray-600`}
+          >
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center mb-0.5 bg-transparent">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </div>
+            <span className="text-[10px] font-semibold leading-tight">Ajustes</span>
           </button>
         </div>
       </nav>

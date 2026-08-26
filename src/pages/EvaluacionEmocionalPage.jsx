@@ -190,10 +190,12 @@ const EvaluacionEmocionalPage = () => {
   const handleCategorizationAnswer = (questionId, answerId) => {
     const newAnswers = { ...categorizationAnswers, [questionId]: answerId };
     setCategorizationAnswers(newAnswers);
+  };
 
-    // Verificar si hay riesgo suicida en las respuestas
-    const question = allCategorizationQuestions.find(q => q.id === questionId);
-    const selectedOption = question?.options?.find(opt => opt.id === answerId);
+  const nextCategorizationQuestion = () => {
+    const currentQuestion = allCategorizationQuestions[currentQuestionIndex];
+    const answerId = categorizationAnswers[currentQuestion.id];
+    const selectedOption = currentQuestion?.options?.find(opt => opt.id === answerId);
 
     if (selectedOption?.text?.toLowerCase().includes('suicid') ||
       selectedOption?.text?.toLowerCase().includes('daño') ||
@@ -203,12 +205,11 @@ const EvaluacionEmocionalPage = () => {
       return;
     }
 
-    // Si es la última pregunta de categorización, determinar qué test aplicar
     const isLastQuestion = currentQuestionIndex === (allCategorizationQuestions.length - 1);
 
     if (isLastQuestion) {
       console.log('🎯 Última pregunta de categorización completada, determinando test...');
-      const determinedTest = determineTestFromCategorization(newAnswers, availableTests);
+      const determinedTest = determineTestFromCategorization(categorizationAnswers, availableTests);
       if (determinedTest) {
         console.log('✅ Test determinado:', determinedTest.title);
         setSelectedTest(determinedTest);
@@ -217,15 +218,19 @@ const EvaluacionEmocionalPage = () => {
         setTestAnswers({});
       } else {
         console.log('⚠️ No se pudo determinar test específico, usando primer test disponible');
-        // Si no se puede determinar un test específico, usar el primer test disponible
         setSelectedTest(availableTests[0]);
         setCurrentStep('test');
         setCurrentQuestionIndex(0);
         setTestAnswers({});
       }
     } else {
-      // Avanzar a la siguiente pregunta
       setCurrentQuestionIndex(currentQuestionIndex + 1);
+    }
+  };
+
+  const prevCategorizationQuestion = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(currentQuestionIndex - 1);
     }
   };
 
@@ -284,7 +289,8 @@ const EvaluacionEmocionalPage = () => {
 
       // Finalizar sesión de evaluación
       if (currentSessionId) {
-        const endSessionResult = await endUserSession(currentSessionId, 0, 'Evaluación completada');
+        const resultText = `Evaluación completada. Puntaje: ${score}. Interpretación: ${interpretation.level} - ${interpretation.description}. Especialidades recomendadas: ${specialties.join(', ')}`;
+        const endSessionResult = await endUserSession(currentSessionId, 0, resultText);
         if (endSessionResult.success) {
           console.log('✅ Sesión de evaluación finalizada:', endSessionResult.duration, 'minutos');
         } else {
@@ -344,7 +350,10 @@ const EvaluacionEmocionalPage = () => {
   const goToDashboard = async () => {
     // Si hay una sesión activa, finalizarla
     if (currentSessionId) {
-      const endSessionResult = await endUserSession(currentSessionId, 0, 'Navegación al dashboard');
+      const reason = testResults 
+        ? `Evaluación completada. Puntaje: ${testResults.score}. Interpretación: ${testResults.interpretation?.level || testResults.interpretation}`
+        : 'Evaluación incompleta (Navegación al dashboard)';
+      const endSessionResult = await endUserSession(currentSessionId, 0, reason);
       if (endSessionResult.success) {
         console.log('✅ Sesión finalizada al navegar al dashboard');
       }
@@ -576,9 +585,9 @@ const EvaluacionEmocionalPage = () => {
     }
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-50 py-12 px-4">
+      <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-50 py-6 sm:py-12 px-4">
         <div className="max-w-4xl mx-auto">
-          <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8">
+          <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-4 sm:p-8">
             {/* Header */}
             <div className="mb-8">
               <div className="flex items-center justify-between mb-4">
@@ -630,7 +639,7 @@ const EvaluacionEmocionalPage = () => {
             </div>
 
             {/* Información adicional */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
               <div className="flex">
                 <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -641,6 +650,25 @@ const EvaluacionEmocionalPage = () => {
                   </p>
                 </div>
               </div>
+            </div>
+            
+            {/* Navegación */}
+            <div className="flex justify-between">
+              <button
+                onClick={prevCategorizationQuestion}
+                disabled={currentQuestionIndex === 0}
+                className="px-6 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Anterior
+              </button>
+
+              <button
+                onClick={nextCategorizationQuestion}
+                disabled={!categorizationAnswers[currentQuestion.id]}
+                className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {currentQuestionIndex === allCategorizationQuestions.length - 1 ? 'Siguiente fase' : 'Siguiente'}
+              </button>
             </div>
           </div>
         </div>
@@ -653,9 +681,9 @@ const EvaluacionEmocionalPage = () => {
     const isLastQuestion = currentQuestionIndex === selectedTest.questions.length - 1;
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-50 py-12 px-4">
+      <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-50 py-6 sm:py-12 px-4">
         <div className="max-w-4xl mx-auto">
-          <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8">
+          <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-4 sm:p-8">
             {/* Header */}
             <div className="mb-8">
               <div className="flex items-center justify-between mb-4">

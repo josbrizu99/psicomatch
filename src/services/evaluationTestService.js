@@ -233,8 +233,16 @@ export const determineTestFromCategorization = (categorizationAnswers, available
 export const calculateTestScore = (test, answers) => {
   try {
     let totalScore = 0;
+    let maxScore = 0;
     
     test.questions.forEach(question => {
+      // Calcular score máximo posible para esta pregunta
+      let questionMaxScore = 0;
+      if (question.options && question.options.length > 0) {
+        questionMaxScore = Math.max(...question.options.map(opt => typeof opt.score === 'number' ? opt.score : 0));
+      }
+      maxScore += questionMaxScore;
+
       const answerId = answers[question.id];
       if (answerId) {
         const option = question.options.find(opt => opt.id === answerId);
@@ -244,16 +252,24 @@ export const calculateTestScore = (test, answers) => {
       }
     });
     
-    return totalScore;
+    const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
+    
+    return {
+      totalScore,
+      maxScore,
+      percentage
+    };
   } catch (error) {
     console.error('Error al calcular puntuación:', error);
-    return 0;
+    return { totalScore: 0, maxScore: 0, percentage: 0 };
   }
 };
 
 // Interpretar resultados del test
-export const interpretTestResults = (test, score) => {
+export const interpretTestResults = (test, scoreObj) => {
   try {
+    const score = typeof scoreObj === 'object' && scoreObj !== null ? scoreObj.totalScore : (scoreObj || 0);
+    
     if (!test.scoreRanges || test.scoreRanges.length === 0) {
       return {
         level: 'Sin interpretación',

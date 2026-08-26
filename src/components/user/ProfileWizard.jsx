@@ -433,44 +433,7 @@ const ProfileWizard = ({ onComplete }) => {
       </div>
 
       <div className="space-y-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-3">
-            Tema de la Aplicación *
-          </label>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div
-              className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${formData.theme === 'light'
-                ? 'border-primary-500 bg-primary-50'
-                : 'border-gray-200 hover:border-gray-300'
-                }`}
-              onClick={() => handleInputChange('theme', 'light')}
-            >
-              <div className="flex items-center space-x-3">
-                <div className="w-4 h-4 rounded-full bg-white border-2 border-gray-300"></div>
-                <div>
-                  <div className="font-medium text-gray-900">Claro</div>
-                  <div className="text-sm text-gray-500">Fondo blanco, texto oscuro</div>
-                </div>
-              </div>
-            </div>
 
-            <div
-              className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${formData.theme === 'dark'
-                ? 'border-primary-500 bg-primary-50'
-                : 'border-gray-200 hover:border-gray-300'
-                }`}
-              onClick={() => handleInputChange('theme', 'dark')}
-            >
-              <div className="flex items-center space-x-3">
-                <div className="w-4 h-4 rounded-full bg-gray-800 border-2 border-gray-300"></div>
-                <div>
-                  <div className="font-medium text-gray-900">Oscuro</div>
-                  <div className="text-sm text-gray-500">Fondo oscuro, texto claro</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-3">

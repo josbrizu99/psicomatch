@@ -46,7 +46,7 @@ const HelpButton = ({ userType = 'user' }) => {
     if (!isVisible) return null;
 
     return (
-        <div className="fixed bottom-28 right-8 z-50">
+        <div className="fixed bottom-[150px] right-4 sm:bottom-28 sm:right-8 z-50">
             {/* Menú desplegable */}
             {showMenu && (
                 <div className="absolute bottom-16 right-0 bg-white dark:bg-gray-800 rounded-lg shadow-xl border dark:border-gray-700 p-2 min-w-[200px]">

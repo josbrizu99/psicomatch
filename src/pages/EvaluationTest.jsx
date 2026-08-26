@@ -167,9 +167,12 @@ const EvaluationTest = () => {
           <p className="text-gray-600 mb-4">{error}</p>
           <button
             onClick={() => navigate('/dashboard')}
-            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+            className="w-full flex items-center justify-center gap-2 text-gray-600 hover:text-gray-900 bg-white border border-gray-300 px-6 py-3 rounded-lg hover:bg-gray-50 transition-colors"
           >
-            Volver al Dashboard
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Volver al inicio
           </button>
         </div>
       </div>
@@ -246,9 +249,12 @@ const EvaluationTest = () => {
               <p className="text-gray-600 mb-4">Por el momento no hay tests de evaluación disponibles.</p>
               <button
                 onClick={() => navigate('/dashboard')}
-                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                className="w-full flex items-center justify-center gap-2 text-gray-600 hover:text-gray-900 bg-white border border-gray-300 px-6 py-3 rounded-lg hover:bg-gray-50 transition-colors"
               >
-                Volver al Dashboard
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Volver al inicio
               </button>
             </div>
           )}

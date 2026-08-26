@@ -1,5 +1,5 @@
 /* eslint-disable */
-require("dotenv").config();
+// require("dotenv").config();
 
 const {onDocumentCreated} = require("firebase-functions/v2/firestore");
 const {onSchedule} = require("firebase-functions/v2/scheduler");
@@ -169,7 +169,7 @@ exports.sendLoginNotification = onCall({ cors: true }, async (request) => {
 // ────────────────────────────────────────────────────────────
 // Callable: Notificación de Emparejamiento al Usuario
 // ────────────────────────────────────────────────────────────
-exports.sendMatchNotificationUser = onCall(async (request) => {
+exports.sendMatchNotificationUser = onCall({ cors: true }, async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Debes estar autenticado");
 
   const {userEmail, userName, professionalName, professionalSpecialty, professionalEmail, compatibilityScore} = request.data;
@@ -200,7 +200,7 @@ exports.sendMatchNotificationUser = onCall(async (request) => {
 // ────────────────────────────────────────────────────────────
 // Callable: Notificación de Nuevo Paciente al Profesional
 // ────────────────────────────────────────────────────────────
-exports.sendMatchNotificationProfessional = onCall(async (request) => {
+exports.sendMatchNotificationProfessional = onCall({ cors: true }, async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Debes estar autenticado");
 
   const {professionalEmail, professionalName, userName, userSpecialtyNeeds} = request.data;
@@ -235,7 +235,7 @@ exports.sendMatchNotificationProfessional = onCall(async (request) => {
 // ────────────────────────────────────────────────────────────
 // Callable: Notificación de Detalles de Sesión al Usuario
 // ────────────────────────────────────────────────────────────
-exports.sendSessionDetailsNotification = onCall(async (request) => {
+exports.sendSessionDetailsNotification = onCall({ cors: true }, async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Debes estar autenticado");
 
   const {userEmail, userName, professionalName, sessionDate, sessionType, sessionLink, sessionAddress, sessionNotes} = request.data;
@@ -273,7 +273,7 @@ exports.sendSessionDetailsNotification = onCall(async (request) => {
 // ────────────────────────────────────────────────────────────
 // Callable: Chequear si el email ya existe
 // ────────────────────────────────────────────────────────────
-exports.checkEmailExists = onCall(async (request) => {
+exports.checkEmailExists = onCall({ cors: true }, async (request) => {
   const { email } = request.data;
   if (!email) throw new HttpsError("invalid-argument", "email es requerido");
 
@@ -292,7 +292,7 @@ exports.checkEmailExists = onCall(async (request) => {
 // ────────────────────────────────────────────────────────────
 // Callable: Generar y enviar código de Registro (Pre-Auth)
 // ────────────────────────────────────────────────────────────
-exports.generateRegistrationCode = onCall(async (request) => {
+exports.generateRegistrationCode = onCall({ cors: true }, async (request) => {
   const { email } = request.data;
 
   if (!email) {
@@ -362,7 +362,7 @@ exports.generateRegistrationCode = onCall(async (request) => {
 // ────────────────────────────────────────────────────────────
 // Callable: Verificar código de Registro
 // ────────────────────────────────────────────────────────────
-exports.verifyRegistrationCode = onCall(async (request) => {
+exports.verifyRegistrationCode = onCall({ cors: true }, async (request) => {
   const { email, code } = request.data;
 
   if (!email || !code) {
@@ -413,7 +413,7 @@ exports.verifyRegistrationCode = onCall(async (request) => {
 // ────────────────────────────────────────────────────────────
 // Callable: Generar y enviar código 2FA (SERVER-SIDE SEGURO)
 // ────────────────────────────────────────────────────────────
-exports.generate2FACode = onCall(async (request) => {
+exports.generate2FACode = onCall({ cors: true }, async (request) => {
   const {uid, email} = request.data;
 
   if (!uid || !email) {
@@ -488,7 +488,7 @@ exports.generate2FACode = onCall(async (request) => {
 // ────────────────────────────────────────────────────────────
 // Callable: Verificar código 2FA (SERVER-SIDE SEGURO)
 // ────────────────────────────────────────────────────────────
-exports.verify2FACode = onCall(async (request) => {
+exports.verify2FACode = onCall({ cors: true }, async (request) => {
   const {uid, code} = request.data;
 
   if (!uid || !code) {
@@ -657,7 +657,7 @@ exports.markExpiredSessions = onSchedule("0 2 * * *", async (event) => {
 // ────────────────────────────────────────────────────────────
 // Callable: Validar profesional (solo admins)
 // ────────────────────────────────────────────────────────────
-exports.validateProfessional = onCall(async (request) => {
+exports.validateProfessional = onCall({ cors: true }, async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Debes estar autenticado");
 
   const db = admin.firestore();
@@ -702,7 +702,7 @@ exports.validateProfessional = onCall(async (request) => {
 // ────────────────────────────────────────────────────────────
 // Callable: Send Push Notification (FCM)
 // ────────────────────────────────────────────────────────────
-exports.sendPushNotification = onCall(async (request) => {
+exports.sendPushNotification = onCall({ cors: true }, async (request) => {
   const { title, body, userId } = request.data;
 
   if (!title || !body || !userId) {
@@ -771,5 +771,175 @@ exports.sendPushNotification = onCall(async (request) => {
   } catch (error) {
     console.error("Error enviando notificación push:", error);
     throw new HttpsError("internal", "No se pudo enviar la notificación push.");
+  }
+});
+
+// ────────────────────────────────────────────────────────────
+// Centralized Email Notifications (Migrated from EmailJS)
+// ────────────────────────────────────────────────────────────
+
+exports.sendProfessionalVerificationEmail = onCall({ cors: true }, async (request) => {
+  const { email, name, isApproved, accessCode } = request.data;
+  if (!email) throw new HttpsError("invalid-argument", "Email is required.");
+  
+  const statusText = isApproved ? "Aprobado" : "Rechazado";
+  const title = `Estado de tu solicitud: ${statusText}`;
+  const subject = `PsicoMatch - Tu solicitud ha sido ${statusText.toLowerCase()}`;
+  
+  let contentHtml = `
+    <h2 style="color:#111827;font-size:22px;font-weight:700;margin-bottom:8px;">Hola, ${name || "Profesional"} 👋</h2>
+    <p style="color:#4b5563;font-size:15px;line-height:1.6;">Te informamos que tu solicitud para formar parte de PsicoMatch ha sido <strong>${statusText.toLowerCase()}</strong>.</p>
+  `;
+
+  if (isApproved) {
+    contentHtml += infoBox(`
+      <p style="margin:0;font-weight:600;color:#0f766e;margin-bottom:8px;">¡Bienvenido a la plataforma!</p>
+      <p style="margin:0;color:#4b5563;font-size:14px;line-height:1.6;">Tu código de acceso único es: <strong>${accessCode}</strong></p>
+      <p style="margin:8px 0 0;color:#4b5563;font-size:14px;line-height:1.6;">Usa este código junto con tu correo para acceder al panel de profesionales.</p>
+    `);
+    contentHtml += `<div style="text-align:center;">${ctaButton(`${APP_URL}/professional/login`, "Acceder al Panel")}</div>`;
+  } else {
+    contentHtml += infoBox(`
+      <p style="margin:0;color:#4b5563;font-size:14px;line-height:1.6;">Lamentablemente, no cumples con los requisitos en este momento. Si tienes dudas, contáctanos.</p>
+    `);
+  }
+
+  const html = baseTemplate(contentHtml);
+  
+  try {
+    await sendMail({ to: email, subject, html });
+    return { success: true };
+  } catch (err) {
+    console.error("Error sending professional verification email:", err);
+    throw new HttpsError("internal", "Error sending email");
+  }
+});
+
+exports.sendProfessionalStatusEmail = onCall({ cors: true }, async (request) => {
+  const { email, name, status, reason } = request.data;
+  if (!email) throw new HttpsError("invalid-argument", "Email is required.");
+  
+  const subject = `PsicoMatch - Actualización del estado de tu cuenta`;
+  
+  const html = baseTemplate(`
+    <h2 style="color:#111827;font-size:22px;font-weight:700;margin-bottom:8px;">Hola, ${name || "Profesional"}</h2>
+    <p style="color:#4b5563;font-size:15px;line-height:1.6;">El estado de tu cuenta en PsicoMatch ha sido actualizado a: <strong>${status}</strong>.</p>
+    ${infoBox(`
+      <p style="margin:0;font-weight:600;color:#0f766e;margin-bottom:8px;">Motivo / Detalles:</p>
+      <p style="margin:0;color:#4b5563;font-size:14px;line-height:1.6;">${reason || "No especificado."}</p>
+    `)}
+    <p style="color:#9ca3af;font-size:13px;margin-top:32px;">Si crees que esto es un error, por favor contacta con el soporte.</p>
+  `);
+
+  try {
+    await sendMail({ to: email, subject, html });
+    return { success: true };
+  } catch (err) {
+    console.error("Error sending status email:", err);
+    throw new HttpsError("internal", "Error sending email");
+  }
+});
+
+exports.sendProfessionalAccessCodeEmail = onCall({ cors: true }, async (request) => {
+  const { email, name, accessCode } = request.data;
+  if (!email) throw new HttpsError("invalid-argument", "Email is required.");
+  
+  const subject = `PsicoMatch - Tu código de acceso profesional`;
+  
+  const html = baseTemplate(`
+    <h2 style="color:#111827;font-size:22px;font-weight:700;margin-bottom:8px;">Hola, ${name || "Profesional"} 👋</h2>
+    <p style="color:#4b5563;font-size:15px;line-height:1.6;">Aquí tienes tu código de acceso para ingresar a tu panel de profesional en PsicoMatch.</p>
+    ${infoBox(`
+      <p style="margin:0;font-weight:600;color:#0f766e;margin-bottom:8px;">Código de acceso:</p>
+      <p style="margin:0;font-size:24px;font-weight:bold;color:#111827;letter-spacing:2px;text-align:center;padding:10px 0;">${accessCode}</p>
+    `)}
+    <div style="text-align:center;">
+      ${ctaButton(`${APP_URL}/professional/login`, "Acceder al Panel")}
+    </div>
+  `);
+
+  try {
+    await sendMail({ to: email, subject, html });
+    return { success: true };
+  } catch (err) {
+    console.error("Error sending access code email:", err);
+    throw new HttpsError("internal", "Error sending email");
+  }
+});
+
+exports.sendProfessionalLoginEmail = onCall({ cors: true }, async (request) => {
+  const { email, name, loginTime } = request.data;
+  if (!email) throw new HttpsError("invalid-argument", "Email is required.");
+  
+  const subject = `PsicoMatch - Nuevo inicio de sesión`;
+  
+  const html = baseTemplate(`
+    <h2 style="color:#111827;font-size:22px;font-weight:700;margin-bottom:8px;">Hola, ${name || "Profesional"}</h2>
+    <p style="color:#4b5563;font-size:15px;line-height:1.6;">Se ha registrado un nuevo inicio de sesión en tu cuenta de PsicoMatch.</p>
+    ${infoBox(`
+      <p style="margin:0;color:#4b5563;font-size:14px;line-height:1.6;">Fecha y hora: <strong>${loginTime}</strong></p>
+    `)}
+    <p style="color:#9ca3af;font-size:13px;margin-top:32px;">Si no fuiste tú, te recomendamos cambiar tus credenciales de acceso o contactarnos inmediatamente.</p>
+  `);
+
+  try {
+    await sendMail({ to: email, subject, html });
+    return { success: true };
+  } catch (err) {
+    console.error("Error sending login email:", err);
+    throw new HttpsError("internal", "Error sending email");
+  }
+});
+
+exports.sendSessionNotification = onCall({ cors: true }, async (request) => {
+  const { toEmail, toName, sessionType, message, details } = request.data;
+  if (!toEmail) throw new HttpsError("invalid-argument", "Email is required.");
+  
+  const subject = `PsicoMatch - Actualización de tu sesión`;
+  
+  const html = baseTemplate(`
+    <h2 style="color:#111827;font-size:22px;font-weight:700;margin-bottom:8px;">Hola, ${toName || "Usuario"}</h2>
+    <p style="color:#4b5563;font-size:15px;line-height:1.6;">${message}</p>
+    ${details ? infoBox(`
+      <p style="margin:0;color:#4b5563;font-size:14px;line-height:1.6;">${details}</p>
+    `) : ''}
+    <div style="text-align:center;">
+      ${ctaButton(`${APP_URL}/dashboard`, "Ir a mi Panel")}
+    </div>
+  `);
+
+  try {
+    await sendMail({ to: toEmail, subject, html });
+    return { success: true };
+  } catch (err) {
+    console.error("Error sending session notification:", err);
+    throw new HttpsError("internal", "Error sending email");
+  }
+});
+
+exports.sendRatingNotificationEmail = onCall({ cors: true }, async (request) => {
+  const { toEmail, toName, rating, message } = request.data;
+  if (!toEmail) throw new HttpsError("invalid-argument", "Email is required.");
+  
+  const subject = `PsicoMatch - Has recibido una nueva calificación`;
+  
+  const html = baseTemplate(`
+    <h2 style="color:#111827;font-size:22px;font-weight:700;margin-bottom:8px;">Hola, ${toName || "Profesional"}</h2>
+    <p style="color:#4b5563;font-size:15px;line-height:1.6;">${message}</p>
+    ${infoBox(`
+      <p style="margin:0;font-weight:600;color:#0f766e;margin-bottom:8px;">Calificación recibida:</p>
+      <p style="margin:0;font-size:24px;font-weight:bold;color:#f59e0b;text-align:center;padding:10px 0;">⭐ ${rating} / 5</p>
+    `)}
+    <div style="text-align:center;">
+      ${ctaButton(`${APP_URL}/professional/dashboard`, "Ir a mi Panel")}
+    </div>
+  `);
+
+  try {
+    await sendMail({ to: toEmail, subject, html });
+    return { success: true };
+  } catch (err) {
+    console.error("Error sending rating notification:", err);
+    throw new HttpsError("internal", "Error sending email");
   }
 });

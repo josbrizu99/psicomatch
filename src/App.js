@@ -16,7 +16,6 @@ import UserSessionHistory from './pages/UserSessionHistory';
 import ProfessionalLogin from './pages/ProfessionalLogin';
 import ProfessionalRegistration from './pages/ProfessionalRegistration';
 import UserTestResults from './pages/UserTestResults';
-import NotificationBell from './components/common/NotificationBell';
 import ProfileWizard from './components/user/ProfileWizard';
 import SkeletonLoader from './components/common/SkeletonLoader';
 import useProfileCompletion from './hooks/useProfileCompletion';
@@ -39,6 +38,7 @@ const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const ProfessionalDashboard = lazy(() => import('./pages/ProfessionalDashboard'));
 const EvaluacionEmocionalPage = lazy(() => import('./pages/EvaluacionEmocionalPage'));
 const UserSettings = lazy(() => import('./pages/UserSettings'));
+const ProfessionalSettings = lazy(() => import('./pages/ProfessionalSettings'));
 
 function AppContent() {
   const location = useLocation();
@@ -152,6 +152,7 @@ function AppContent() {
               <Route path="/professional-login" element={<ProfessionalLogin />} />
               <Route path="/professional-registration" element={<ProfessionalRegistration />} />
               <Route path="/professional-dashboard" element={<ProfessionalDashboard />} />
+              <Route path="/professional-settings" element={<ProfessionalSettings />} />
               <Route 
                 path="/dashboard" 
                 element={

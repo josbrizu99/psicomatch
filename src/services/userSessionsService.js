@@ -16,7 +16,7 @@ import { db } from '../firebase/firebase';
 import { sendSessionRatingNotification, sendRatingNotification } from './emailService';
 
 // Crear una nueva sesión de usuario
-export const createUserSession = async (userId, professionalId, sessionType = 'evaluation', scheduledDate = null, scheduledTime = null) => {
+export const createUserSession = async (userId, professionalId, sessionType = 'evaluation', scheduledDate = null, scheduledTime = null, meetingType = null) => {
   try {
     console.log('🔄 Creando nueva sesión para usuario:', userId);
     
@@ -41,7 +41,7 @@ export const createUserSession = async (userId, professionalId, sessionType = 'e
       scheduledDate: scheduledDate || null,
       scheduledTime: scheduledTime || null,
       scheduledDateTime: scheduledDateTime ? scheduledDateTime : null,
-      meetingType: null, // Será elegido por el paciente: 'virtual' o 'presencial'
+      meetingType: meetingType, // Puede ser 'virtual', 'presencial' o null
       meetingLink: null, // Enlace de Meet/Zoom (si es virtual)
       meetingLocation: null, // Ubicación de la clínica (si es presencial)
       endTime: null,
@@ -49,7 +49,7 @@ export const createUserSession = async (userId, professionalId, sessionType = 'e
       rating: 0,
       notes: 'none',
       createdAt: startTime,
-      requiresPatientChoice: true // Indica que el paciente debe elegir el tipo de reunión
+      requiresPatientChoice: meetingType === null // Si no se provee, el paciente debe elegir
     };
     
     const docRef = await addDoc(collection(db, 'userSessions'), sessionData);

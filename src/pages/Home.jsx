@@ -27,7 +27,7 @@ const Home = () => {
   }, []);
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen overflow-x-hidden">
       <HeroSection />
 
       <Suspense fallback={<div className="container mx-auto px-4 py-8"><SkeletonLoader width="100%" height="400px" /></div>}>

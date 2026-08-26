@@ -4,7 +4,7 @@ const ChatButton = ({ unreadCount = 0, onClick }) => {
     return (
         <button
             onClick={onClick}
-            className="fixed bottom-6 right-6 z-30 bg-gradient-to-br from-primary-600 to-primary-700 text-white rounded-full p-4 shadow-2xl hover:shadow-3xl hover:scale-110 transition-all duration-300 group"
+            className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-50 bg-gradient-to-br from-primary-600 to-primary-700 text-white rounded-full p-4 shadow-2xl hover:shadow-3xl hover:scale-110 transition-all duration-300 group"
             aria-label="Abrir chat"
         >
             {/* Icon */}
