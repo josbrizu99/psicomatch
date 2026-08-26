@@ -6,6 +6,8 @@ import { auth, db } from '../../firebase/firebase';
 import { isValidAccessCode } from '../../services/professionalAccessCodeService';
 import { sendProfessionalLoginNotification } from '../../services/emailService';
 import ForgotPasswordModal from '../common/ForgotPasswordModal';
+import { isProfessional2FAEnabled } from '../../services/twoFactorService';
+import TwoFactorModal from '../common/TwoFactorModal';
 
 const ProfessionalLoginTwoStep = () => {
   const [step, setStep] = useState(1); // 1: Email/Password, 2: Access Code
@@ -20,6 +22,7 @@ const ProfessionalLoginTwoStep = () => {
   const [success, setSuccess] = useState('');
   const [professionalData, setProfessionalData] = useState(null);
   const [showResetModal, setShowResetModal] = useState(false);
+  const [show2FA, setShow2FA] = useState(false);
   const navigate = useNavigate();
 
   const handleInputChange = (e) => {
@@ -93,9 +96,17 @@ const ProfessionalLoginTwoStep = () => {
       }
 
       // Guardar datos del profesional para el siguiente paso
-      setProfessionalData({ ...data, id: professionalId });
-      setStep(2);
-      setSuccess('Credenciales verificadas. Ahora ingresa tu código de acceso.');
+      setProfessionalData({ ...data, id: professionalId, uid: user.uid });
+
+      const twoFAEnabled = await isProfessional2FAEnabled(user.uid);
+
+      if (twoFAEnabled) {
+        setShow2FA(true);
+        setSuccess('Credenciales verificadas. Completá la verificación de dos factores enviada a tu correo.');
+      } else {
+        setStep(2);
+        setSuccess('Credenciales verificadas. Ahora ingresa tu código de acceso.');
+      }
 
     } catch (error) {
       console.error('Error en paso 1:', error);
@@ -206,12 +217,36 @@ const ProfessionalLoginTwoStep = () => {
     }
   };
 
+  const handle2FAVerified = () => {
+    setShow2FA(false);
+    sessionStorage.setItem(`2fa_verified_${auth.currentUser?.uid}`, 'true');
+    setStep(2); // Go to Access Code step
+    setSuccess('Verificación de dos factores exitosa. Ahora ingresa tu código de acceso.');
+  };
+
+  const handle2FACancel = async () => {
+    setShow2FA(false);
+    setSuccess('');
+    setError('Sesión cancelada. Se requiere verificación de dos factores.');
+    setProfessionalData(null);
+    if (auth.currentUser) {
+      await auth.signOut();
+    }
+  };
+
   return (
     <>
       <ForgotPasswordModal
         isOpen={showResetModal}
         onClose={() => setShowResetModal(false)}
         defaultEmail={formData.email}
+      />
+      <TwoFactorModal
+        isOpen={show2FA}
+        uid={auth.currentUser?.uid || professionalData?.id}
+        email={auth.currentUser?.email || professionalData?.email}
+        onVerified={handle2FAVerified}
+        onCancel={handle2FACancel}
       />
       <div className="min-h-screen bg-gradient-to-br from-surface-off via-primary-50 to-secondary-50 flex items-center justify-center py-8 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
         {/* Decorative blobs */}

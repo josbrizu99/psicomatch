@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../firebase/firebase';
+import { auth, db, storage } from '../firebase/firebase';
 import { toggleProfessional2FA, isProfessional2FAEnabled } from '../services/twoFactorService';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
@@ -36,6 +36,14 @@ const ProfessionalSettings = () => {
         }
         const is2FA = await isProfessional2FAEnabled(currentUser.uid);
         setTwoFactorEnabled(is2FA);
+
+        const is2FAVerified = sessionStorage.getItem(`2fa_verified_${currentUser.uid}`) === 'true';
+        if (is2FA && !is2FAVerified) {
+          console.log('❌ 2FA habilitado pero no verificado en configuración, deslogueando...');
+          await auth.signOut();
+          navigate('/professional-login');
+          return;
+        }
       } catch (error) {
         console.error('Error loading professional settings:', error);
         toast.error('Error al cargar la configuracion');
@@ -49,6 +57,11 @@ const ProfessionalSettings = () => {
     const result = await toggleProfessional2FA(currentUser.uid, newValue);
     if (result.success) {
       setTwoFactorEnabled(newValue);
+      if (newValue) {
+        sessionStorage.setItem(`2fa_verified_${currentUser.uid}`, 'true');
+      } else {
+        sessionStorage.removeItem(`2fa_verified_${currentUser.uid}`);
+      }
       const msg = 'Autenticacion de 2 Factores ' + (newValue ? 'activada' : 'desactivada') + ' correctamente.';
       toast.success(msg);
     } else { toast.error(result.error); }

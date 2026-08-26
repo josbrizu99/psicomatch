@@ -3,6 +3,7 @@
     "rules": "firestore.rules"
   },
   "storage": {
+    "bucket": "psicomatch2026.firebasestorage.app",
     "rules": "storage.rules"
   },
   "functions": [

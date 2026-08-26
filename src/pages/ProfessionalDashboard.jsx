@@ -173,6 +173,17 @@ const ProfessionalDashboard = () => {
         } else if (!isVerified) {
           navigate('/professional-login');
         } else {
+          // Verificar si requiere 2FA y no está verificado
+          const twoFAEnabled = professionalData.twoFactorEnabled === true;
+          const is2FAVerified = sessionStorage.getItem(`2fa_verified_${professionalData.id || professionalData.uid || professionalData.profId}`) === 'true';
+
+          if (twoFAEnabled && !is2FAVerified) {
+            console.log('❌ 2FA habilitado pero no verificado, deslogueando...');
+            auth.signOut().then(() => {
+              navigate('/professional-login');
+            });
+            return;
+          }
           // Actualizar lastActivityAt para reflejar actividad real
           const profDocId = professionalData.id || professionalData.uid || professionalData.profId;
           if (profDocId) {
