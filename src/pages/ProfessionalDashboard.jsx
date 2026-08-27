@@ -6,7 +6,7 @@ import { updateProfile } from 'firebase/auth';
 import { auth } from '../firebase/firebase';
 import { logoutProfessional, updateProfessionalData } from '../services/professionalAuthService';
 import { listenProfessionalSessions, updateSessionProgress, completeSessionByProfessional, updateUserCareStatus, createUserSession, saveSessionProgress, sendMeetingDetails } from '../services/userSessionsService';
-import { doc, getDoc, updateDoc, serverTimestamp, collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, serverTimestamp, collection, query, where, orderBy, limit, getDocs, onSnapshot, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase/firebase';
 import {
   sendSessionStatusEmail,
@@ -85,6 +85,7 @@ const ProfessionalDashboard = () => {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [professionalNotifications, setProfessionalNotifications] = useState([]);
+  const [dbNotifications, setDbNotifications] = useState([]);
   const [quickCompleteReason, setQuickCompleteReason] = useState('');
   const [selectedSession, setSelectedSession] = useState(null);
   const [sessionNotes, setSessionNotes] = useState('');
@@ -277,7 +278,7 @@ const ProfessionalDashboard = () => {
         const patient = patientMap[session.userId];
         const patientName = patient?.name || patient?.email || 'Un paciente';
 
-        // Notificación: Paciente eligió tipo de sesión
+        // Notificación: Profesional eligió tipo de sesión
         if (session.meetingType && session.requiresPatientChoice === false) {
           const notificationId = `session-${session.id}-type-chosen`;
           // Verificar si ya fue leída
@@ -285,8 +286,8 @@ const ProfessionalDashboard = () => {
             newNotifications.push({
               id: notificationId,
               type: 'meeting_type_chosen',
-              title: 'Tipo de sesión elegido',
-              message: `${patientName} ha elegido sesión ${session.meetingType === 'virtual' ? 'virtual' : 'presencial'}${session.scheduledDate ? ` para el ${new Date(session.scheduledDate + 'T00:00:00').toLocaleDateString('es-ES')}` : ''}${session.scheduledTime ? ` a las ${session.scheduledTime}` : ''}. ${session.meetingType === 'virtual' ? 'Por favor, envía el enlace de la reunión.' : 'Por favor, envía la ubicación de la clínica.'}`,
+              title: 'Tipo de sesión definido',
+              message: `Has definido la sesión con ${patientName} como ${session.meetingType === 'virtual' ? 'virtual' : 'presencial'}${session.scheduledDate ? ` para el ${new Date(session.scheduledDate + 'T00:00:00').toLocaleDateString('es-ES')}` : ''}${session.scheduledTime ? ` a las ${session.scheduledTime}` : ''}. ${session.meetingType === 'virtual' ? 'Asegúrate de enviar el enlace de la reunión.' : 'Asegúrate de enviar la ubicación de la clínica.'}`,
               sessionId: session.id,
               session: session,
               timestamp: session.updatedAt || session.createdAt || new Date(),
@@ -336,7 +337,7 @@ const ProfessionalDashboard = () => {
             id: notificationId,
             type: 'send_meeting_details',
             title: 'Enviar detalles de sesión',
-            message: `${patientName} ha elegido sesión ${session.meetingType === 'virtual' ? 'virtual' : 'presencial'}. Por favor, envía ${session.meetingType === 'virtual' ? 'el enlace' : 'la ubicación'}.`,
+            message: `Has definido la sesión con ${patientName} como ${session.meetingType === 'virtual' ? 'virtual' : 'presencial'}. Por favor, envía ${session.meetingType === 'virtual' ? 'el enlace de videollamada' : 'la ubicación de la clínica'}.`,
             sessionId: session.id,
             session: session,
             timestamp: session.updatedAt || session.createdAt || new Date(),
@@ -439,7 +440,6 @@ const ProfessionalDashboard = () => {
       // Actualizar ref con los pacientes actuales
       previousPatientIdsRef.current = new Set(assigned.map(p => p.id));
 
-      // Cargar estimaciones de sesiones desde Firestore
       const loadEstimations = async () => {
         const estimations = {};
         for (const patient of assigned) {
@@ -464,6 +464,28 @@ const ProfessionalDashboard = () => {
     });
 
     return () => unsubscribe && unsubscribe();
+  }, [professionalData]);
+
+  // Escuchar notificaciones persistentes en la BD
+  useEffect(() => {
+    if (!professionalData) return;
+    const profId = professionalData.id || professionalData.uid || professionalData.profId;
+    if (!profId) return;
+
+    const notifsRef = collection(db, 'professionals', profId, 'notifications');
+    const q = query(notifsRef, orderBy('timestamp', 'desc'));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const dbNotifs = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        isDbNotification: true,
+        read: doc.data().read || false
+      }));
+      setDbNotifications(dbNotifs);
+    }, (err) => console.error('Error listening to notifications:', err));
+
+    return () => unsubscribe();
   }, [professionalData]);
 
   const handleLogout = async () => {
@@ -1474,10 +1496,7 @@ const ProfessionalDashboard = () => {
 
               {/* Dropdown de notificaciones */}
               {showNotifications && (
-                <div 
-                  className="absolute right-0 mt-2 w-[300px] sm:w-80 bg-white rounded-xl shadow-xl border border-gray-200 z-50 origin-top-right"
-                  style={{ maxWidth: 'calc(100vw - 32px)' }}
-                >
+                <div className="fixed sm:absolute top-20 sm:top-auto left-4 right-4 sm:left-auto sm:right-0 mt-2 sm:w-80 bg-white rounded-xl shadow-xl border border-gray-200 z-50 sm:origin-top-right transition-all">
                   <div className="p-4 border-b border-gray-200">
                     <div className="flex items-center justify-between">
                       <div>

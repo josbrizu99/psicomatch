@@ -7,7 +7,8 @@ import {
   updateDoc, 
   getDoc,
   orderBy,
-  limit
+  limit,
+  addDoc
 } from 'firebase/firestore';
 import { db } from '../firebase/firebase';
 import { serverTimestamp } from 'firebase/firestore';
@@ -251,7 +252,7 @@ export const findMatchingProfessional = async (userId, testSpecialties, userResu
         compatibilityScore: selectedProfessional.compatibilityScore,
       }).catch((e) => console.warn('Email match usuario fallido:', e.message));
 
-      // Notificar al profesional
+      // Notificar al profesional (Email)
       const sendMatchProfessional = httpsCallable(functions, 'sendMatchNotificationProfessional');
       sendMatchProfessional({
         professionalEmail: selectedProfessional.email || selectedProfessional.contact?.email,
@@ -259,8 +260,24 @@ export const findMatchingProfessional = async (userId, testSpecialties, userResu
         userName: userData?.name || 'usuario',
         userSpecialtyNeeds: specialtyNeeds,
       }).catch((e) => console.warn('Email match profesional fallido:', e.message));
+
+      // Guardar notificación persistente en la BD para el profesional
+      try {
+        const notificationsRef = collection(db, 'professionals', selectedProfessional.id, 'notifications');
+        await addDoc(notificationsRef, {
+          type: 'new_patient_assigned',
+          title: 'Nuevo paciente asignado',
+          message: `${userData?.name || userData?.email || 'Un usuario'} ha sido asignado como tu paciente.`,
+          patientId: userId,
+          timestamp: serverTimestamp(),
+          read: false
+        });
+        console.log('✅ Notificación persistente guardada para el profesional.');
+      } catch (notifErr) {
+        console.warn('❌ Error al guardar notificación en BD:', notifErr.message);
+      }
     } catch (emailErr) {
-      console.warn('Error al enviar emails de match:', emailErr.message);
+      console.warn('Error al enviar emails de match u obtener datos de usuario:', emailErr.message);
     }
 
     return { 

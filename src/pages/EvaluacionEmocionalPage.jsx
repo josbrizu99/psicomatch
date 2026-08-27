@@ -289,7 +289,8 @@ const EvaluacionEmocionalPage = () => {
 
       // Finalizar sesión de evaluación
       if (currentSessionId) {
-        const resultText = `Evaluación completada. Puntaje: ${score}. Interpretación: ${interpretation.level} - ${interpretation.description}. Especialidades recomendadas: ${specialties.join(', ')}`;
+        const scoreStr = score !== null && typeof score === 'object' ? Object.entries(score).map(([k,v]) => `${k}: ${v}`).join(', ') : score;
+        const resultText = `Evaluación completada. Puntaje: ${scoreStr}. Interpretación: ${interpretation.level} - ${interpretation.description}. Especialidades recomendadas: ${specialties.join(', ')}`;
         const endSessionResult = await endUserSession(currentSessionId, 0, resultText);
         if (endSessionResult.success) {
           console.log('✅ Sesión de evaluación finalizada:', endSessionResult.duration, 'minutos');
@@ -350,8 +351,11 @@ const EvaluacionEmocionalPage = () => {
   const goToDashboard = async () => {
     // Si hay una sesión activa, finalizarla
     if (currentSessionId) {
+      const scoreStr = testResults?.score !== undefined && testResults.score !== null 
+        ? (typeof testResults.score === 'object' ? Object.entries(testResults.score).map(([k,v]) => `${k}: ${v}`).join(', ') : testResults.score) 
+        : '';
       const reason = testResults 
-        ? `Evaluación completada. Puntaje: ${testResults.score}. Interpretación: ${testResults.interpretation?.level || testResults.interpretation}`
+        ? `Evaluación completada. Puntaje: ${scoreStr}. Interpretación: ${testResults.interpretation?.level || testResults.interpretation}`
         : 'Evaluación incompleta (Navegación al dashboard)';
       const endSessionResult = await endUserSession(currentSessionId, 0, reason);
       if (endSessionResult.success) {

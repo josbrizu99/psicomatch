@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useProfessionalAuth } from '../../contexts/ProfessionalAuthContext';
 import { logoutUser } from '../../services/authService';
 import NotificationBell from './NotificationBell';
+import PatientNotificationBell from './PatientNotificationBell';
 const Navbar = () => {
   const { currentUser, isUserAdmin, userData } = useAuth();
   const { isUserProfessional } = useProfessionalAuth();
@@ -118,7 +119,7 @@ const Navbar = () => {
             {currentUser ? (
               /* ── Usuario logueado: campana + dropdown ── */
               <div className="flex items-center space-x-2 sm:space-x-4">
-                <NotificationBell />
+                {isUserAdmin ? <NotificationBell /> : (!isUserProfessional && <PatientNotificationBell />)}
                 <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}

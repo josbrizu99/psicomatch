@@ -32,8 +32,6 @@ const UserDashboard = () => {
   // eslint-disable-next-line no-unused-vars
   const [ratingProfessional, setRatingProfessional] = useState(null);
   const [sessionProgress, setSessionProgress] = useState([]);
-  const [notifications, setNotifications] = useState([]);
-  const [showNotifications, setShowNotifications] = useState(false);
   const [showMeetingTypeModal, setShowMeetingTypeModal] = useState(false);
   const [selectedSessionForType, setSelectedSessionForType] = useState(null);
   const [selectedMeetingType, setSelectedMeetingType] = useState('');
@@ -75,7 +73,6 @@ const UserDashboard = () => {
         if (sessionsResult.success) {
           setSessions(sessionsResult.sessions);
           // Actualizar notificaciones basadas en sesiones
-          updateNotificationsFromSessions(sessionsResult.sessions);
         }
 
         // Cargar progreso de sesiones desde userTestResults
@@ -121,98 +118,6 @@ const UserDashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  // Cargar notificaciones leídas desde localStorage
-  const getReadNotifications = () => {
-    if (!currentUser) return new Set();
-    try {
-      const stored = localStorage.getItem(`user_read_notifications_${currentUser.uid}`);
-      return stored ? new Set(JSON.parse(stored)) : new Set();
-    } catch (error) {
-      console.error('Error al cargar notificaciones leídas:', error);
-      return new Set();
-    }
-  };
-
-  // Guardar notificaciones leídas en localStorage
-  const saveReadNotifications = (readIds) => {
-    if (!currentUser) return;
-    try {
-      localStorage.setItem(`user_read_notifications_${currentUser.uid}`, JSON.stringify(Array.from(readIds)));
-    } catch (error) {
-      console.error('Error al guardar notificaciones leídas:', error);
-    }
-  };
-
-  // Actualizar notificaciones basadas en sesiones
-  const updateNotificationsFromSessions = (sessionsList) => {
-    const readNotifications = getReadNotifications();
-    const newNotifications = [];
-
-    sessionsList.forEach(session => {
-      // Notificación: Sesión programada que requiere elegir tipo de reunión
-      if (session.status === 'scheduled' && session.requiresPatientChoice && !session.meetingType) {
-        const notificationId = `session-${session.id}-choose-type`;
-        const sessionTypeMap = {
-          'consultation': 'Consulta',
-          'evaluation': 'Evaluación',
-          'follow-up': 'Seguimiento',
-          'therapy': 'Terapia'
-        };
-
-        const formattedDate = session.scheduledDate
-          ? new Date(session.scheduledDate + 'T00:00:00').toLocaleDateString('es-ES', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-          })
-          : '';
-
-        newNotifications.push({
-          id: notificationId,
-          type: 'session_choice_required',
-          title: 'Nueva sesión programada',
-          message: `Tienes una ${sessionTypeMap[session.sessionType] || 'sesión'} programada${formattedDate ? ` para el ${formattedDate}` : ''}${session.scheduledTime ? ` a las ${session.scheduledTime}` : ''}. Por favor, elige si será virtual o presencial.`,
-          sessionId: session.id,
-          session: session,
-          timestamp: session.createdAt || new Date(),
-          read: readNotifications.has(notificationId)
-        });
-      }
-
-      // Notificación: Profesional ha enviado detalles de la reunión
-      if (session.meetingType && (session.meetingLink || session.meetingLocation)) {
-        const notificationId = `session-${session.id}-details`;
-        const sessionTypeMap = {
-          'consultation': 'Consulta',
-          'evaluation': 'Evaluación',
-          'follow-up': 'Seguimiento',
-          'therapy': 'Terapia'
-        };
-
-        newNotifications.push({
-          id: notificationId,
-          type: 'session_details_received',
-          title: 'Detalles de sesión recibidos',
-          message: `Tu profesional ha enviado los detalles de tu ${sessionTypeMap[session.sessionType] || 'sesión'}. ${session.meetingType === 'virtual' ? 'Enlace disponible.' : 'Ubicación disponible.'}`,
-          sessionId: session.id,
-          session: session,
-          timestamp: session.updatedAt || new Date(),
-          read: readNotifications.has(notificationId)
-        });
-      }
-    });
-
-    // Ordenar por timestamp (más recientes primero)
-    newNotifications.sort((a, b) => {
-      const aTime = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(a.timestamp);
-      const bTime = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(b.timestamp);
-      return bTime - aTime;
-    });
-
-    setNotifications(newNotifications);
   };
 
   const handleStartEvaluation = () => {
@@ -366,8 +271,6 @@ const UserDashboard = () => {
 
     const unsubscribe = listenUserSessions(currentUser.uid, (liveSessions) => {
       setSessions(liveSessions);
-      // Actualizar notificaciones cuando cambien las sesiones
-      updateNotificationsFromSessions(liveSessions);
     });
 
     return () => unsubscribe && unsubscribe();
@@ -1087,6 +990,29 @@ const UserDashboard = () => {
                         <p className="text-xs text-gray-500">
                           <strong>Motivo de finalización:</strong> {session.endReason}
                         </p>
+                      </div>
+                    )}
+
+                    {session.meetingType && (
+                      <div className="mt-4 pt-4 border-t border-gray-200">
+                        <p className="text-sm font-medium text-gray-800 mb-2">Detalles de la sesión:</p>
+                        <p className="text-sm text-gray-600 mb-1">
+                          <strong>Tipo:</strong> {session.meetingType === 'virtual' ? 'Virtual' : 'Presencial'}
+                        </p>
+                        {(session.meetingLink || session.meetingLocation) ? (
+                          <p className="text-sm text-gray-600">
+                            <strong>{session.meetingType === 'virtual' ? 'Enlace:' : 'Ubicación:'}</strong>{' '}
+                            {session.meetingType === 'virtual' ? (
+                              <a href={session.meetingLink.startsWith('http') ? session.meetingLink : `https://${session.meetingLink}`} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
+                                {session.meetingLink}
+                              </a>
+                            ) : (
+                              session.meetingLocation
+                            )}
+                          </p>
+                        ) : (
+                          <p className="text-sm text-gray-500 italic">Pendiente de detalles por el profesional</p>
+                        )}
                       </div>
                     )}
 

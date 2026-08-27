@@ -219,10 +219,33 @@ const UserSessionHistory = () => {
                   )}
                   
                   {session.endReason && (
-                    <div className="mt-3 pt-3 border-t border-gray-100">
-                      <p className="text-sm text-gray-600">
+                    <div className="mt-2 pt-2 border-t border-gray-100">
+                      <p className="text-xs text-gray-500">
                         <strong>Motivo de finalización:</strong> {session.endReason}
                       </p>
+                    </div>
+                  )}
+
+                  {session.meetingType && (
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <p className="text-sm font-medium text-gray-800 mb-2">Detalles de la sesión:</p>
+                      <p className="text-sm text-gray-600 mb-1">
+                        <strong>Tipo:</strong> {session.meetingType === 'virtual' ? 'Virtual' : 'Presencial'}
+                      </p>
+                      {(session.meetingLink || session.meetingLocation) ? (
+                        <p className="text-sm text-gray-600">
+                          <strong>{session.meetingType === 'virtual' ? 'Enlace:' : 'Ubicación:'}</strong>{' '}
+                          {session.meetingType === 'virtual' ? (
+                            <a href={session.meetingLink.startsWith('http') ? session.meetingLink : `https://${session.meetingLink}`} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
+                              {session.meetingLink}
+                            </a>
+                          ) : (
+                            session.meetingLocation
+                          )}
+                        </p>
+                      ) : (
+                        <p className="text-sm text-gray-500 italic">Pendiente de detalles por el profesional</p>
+                      )}
                     </div>
                   )}
 
