@@ -7,6 +7,10 @@ import {
   regenerateAccessCode,
   getProfessionalAccessCode 
 } from '../../services/professionalAccessCodeService';
+import { 
+  sendProfessionalStatusEmail, 
+  sendProfessionalAccessCode 
+} from '../../services/emailService';
 
 const ManageProfessionalAccess = () => {
   const [professionals, setProfessionals] = useState([]);
@@ -54,6 +58,15 @@ const ManageProfessionalAccess = () => {
       
       if (result.success) {
         setSuccess('Acceso del profesional desactivado');
+        const professional = professionals.find(p => p.id === professionalId);
+        if (professional && professional.email) {
+          sendProfessionalStatusEmail({
+            email: professional.email,
+            name: professional.fullName || professional.name || 'Profesional',
+            status: 'inactive',
+            reason: 'Tu código de acceso profesional ha sido desactivado por el administrador. No podrás iniciar sesión en la plataforma hasta que sea reactivado.'
+          }).catch(e => console.error('Error enviando email de desactivación de acceso:', e));
+        }
         await loadProfessionals();
       } else {
         setError(result.error);
@@ -73,6 +86,14 @@ const ManageProfessionalAccess = () => {
       
       if (result.success) {
         setSuccess(`Acceso del profesional reactivado. Nuevo código: ${result.newAccessCode}`);
+        const professional = professionals.find(p => p.id === professionalId);
+        if (professional && professional.email) {
+          sendProfessionalAccessCode(
+            professional.email,
+            professional.fullName || professional.name || 'Profesional',
+            result.newAccessCode
+          ).catch(e => console.error('Error enviando email de reactivación de acceso:', e));
+        }
         await loadProfessionals();
       } else {
         setError(result.error);
@@ -92,6 +113,14 @@ const ManageProfessionalAccess = () => {
       
       if (result.success) {
         setSuccess(`Código regenerado: ${result.newAccessCode}`);
+        const professional = professionals.find(p => p.id === professionalId);
+        if (professional && professional.email) {
+          sendProfessionalAccessCode(
+            professional.email,
+            professional.fullName || professional.name || 'Profesional',
+            result.newAccessCode
+          ).catch(e => console.error('Error enviando email de nuevo código de acceso:', e));
+        }
         await loadProfessionals();
       } else {
         setError(result.error);

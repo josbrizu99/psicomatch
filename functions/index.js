@@ -943,3 +943,29 @@ exports.sendRatingNotificationEmail = onCall({ cors: true }, async (request) => 
     throw new HttpsError("internal", "Error sending email");
   }
 });
+
+exports.sendProfessionalRegistrationReceivedEmail = onCall({ cors: true }, async (request) => {
+  const { email, name } = request.data;
+  if (!email) throw new HttpsError("invalid-argument", "Email is required.");
+  
+  const subject = `PsicoMatch - Tu registro ha sido recibido`;
+  
+  const html = baseTemplate(`
+    <h2 style="color:#111827;font-size:22px;font-weight:700;margin-bottom:8px;">Hola, ${name || "Profesional"} 👋</h2>
+    <p style="color:#4b5563;font-size:15px;line-height:1.6;">Hemos recibido correctamente tu solicitud de registro en PsicoMatch.</p>
+    ${infoBox(`
+      <p style="margin:0;font-weight:600;color:#0f766e;margin-bottom:8px;">¿Qué sigue ahora?</p>
+      <p style="margin:0;color:#4b5563;font-size:14px;line-height:1.6;">Nuestro equipo revisará tu perfil para validar tus datos. Te notificaremos por correo electrónico una vez que tu cuenta sea aprobada y te brindaremos tu código de acceso para ingresar a la plataforma.</p>
+    `)}
+    <p style="color:#4b5563;font-size:15px;line-height:1.6;margin-top:20px;">Gracias por querer formar parte de PsicoMatch.</p>
+  `);
+
+  try {
+    await sendMail({ to: email, subject, html });
+    return { success: true };
+  } catch (err) {
+    console.error("Error sending registration received email:", err);
+    throw new HttpsError("internal", "Error sending email");
+  }
+});
+

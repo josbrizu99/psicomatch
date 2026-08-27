@@ -8,7 +8,7 @@ import { toggle2FA, is2FAEnabled } from '../services/twoFactorService';
 import toast from 'react-hot-toast';
 
 const UserSettings = () => {
-  const { currentUser, userData, updateUserData } = useAuth();
+  const { currentUser, userData, updateUserData, isUserAdmin } = useAuth();
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
   const [loading, setLoading] = useState(true);
@@ -279,12 +279,20 @@ const UserSettings = () => {
             <div className="flex items-center justify-between gap-4">
               <div className="flex-1">
                 <p className="font-medium text-gray-900">Autenticación de Dos Factores (2FA)</p>
-                <p className="text-sm text-gray-500 mt-1">Agrega una capa extra de seguridad recibiendo un código en tu correo al iniciar sesión.</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  {isUserAdmin 
+                    ? 'La autenticación en dos pasos es obligatoria para tu cuenta de administrador.' 
+                    : 'Agrega una capa extra de seguridad recibiendo un código en tu correo al iniciar sesión.'}
+                </p>
               </div>
               <div className="flex-shrink-0">
                 <button
                   onClick={handleToggle2FA}
-                  className={`relative inline-flex h-7 w-14 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-600 focus:ring-offset-2 ${twoFactorEnabled ? 'bg-primary-600' : 'bg-gray-200'}`}
+                  disabled={isUserAdmin}
+                  className={`relative inline-flex h-7 w-14 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-600 focus:ring-offset-2 ${
+                    isUserAdmin ? 'bg-primary-400 cursor-not-allowed opacity-70' : 
+                    twoFactorEnabled ? 'bg-primary-600 cursor-pointer' : 'bg-gray-200 cursor-pointer'
+                  }`}
                 >
                   <span className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${twoFactorEnabled ? 'translate-x-7' : 'translate-x-0'}`} />
                 </button>

@@ -70,6 +70,8 @@ const CreateEvaluationTest = ({ testToEdit = null, onClose }) => {
     required: true
   });
 
+  const [editingQuestionIndex, setEditingQuestionIndex] = useState(null);
+
   const [currentScoreRange, setCurrentScoreRange] = useState({
     minScore: 0,
     maxScore: null,
@@ -176,7 +178,7 @@ const CreateEvaluationTest = ({ testToEdit = null, onClose }) => {
   const addQuestion = () => {
     if (currentQuestion.text.trim() && currentQuestion.options.length >= 2) {
       const newQuestion = {
-        id: Date.now().toString(),
+        id: currentQuestion.id || Date.now().toString(),
         text: currentQuestion.text.trim(),
         type: currentQuestion.type,
         importance: currentQuestion.importance,
@@ -184,10 +186,18 @@ const CreateEvaluationTest = ({ testToEdit = null, onClose }) => {
         options: currentQuestion.options.filter(opt => opt.text.trim())
       };
 
-      setFormData(prev => ({
-        ...prev,
-        questions: [...prev.questions, newQuestion]
-      }));
+      if (editingQuestionIndex !== null) {
+        setFormData(prev => ({
+          ...prev,
+          questions: prev.questions.map((q, i) => i === editingQuestionIndex ? newQuestion : q)
+        }));
+        setEditingQuestionIndex(null);
+      } else {
+        setFormData(prev => ({
+          ...prev,
+          questions: [...prev.questions, newQuestion]
+        }));
+      }
 
       setCurrentQuestion({
         text: '',
@@ -199,7 +209,50 @@ const CreateEvaluationTest = ({ testToEdit = null, onClose }) => {
     }
   };
 
+  const cancelEditQuestion = () => {
+    setEditingQuestionIndex(null);
+    setCurrentQuestion({
+      text: '',
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      importance: QUESTION_IMPORTANCE.HIGH,
+      options: [],
+      required: true
+    });
+  };
+
+  const handleEditQuestion = (index) => {
+    setCurrentQuestion(formData.questions[index]);
+    setEditingQuestionIndex(index);
+  };
+
+  const moveQuestionUp = (index) => {
+    if (index === 0) return;
+    setFormData(prev => {
+      const newQuestions = [...prev.questions];
+      const temp = newQuestions[index];
+      newQuestions[index] = newQuestions[index - 1];
+      newQuestions[index - 1] = temp;
+      return { ...prev, questions: newQuestions };
+    });
+  };
+
+  const moveQuestionDown = (index) => {
+    if (index === formData.questions.length - 1) return;
+    setFormData(prev => {
+      const newQuestions = [...prev.questions];
+      const temp = newQuestions[index];
+      newQuestions[index] = newQuestions[index + 1];
+      newQuestions[index + 1] = temp;
+      return { ...prev, questions: newQuestions };
+    });
+  };
+
   const removeQuestion = (index) => {
+    if (editingQuestionIndex === index) {
+      cancelEditQuestion();
+    } else if (editingQuestionIndex !== null && index < editingQuestionIndex) {
+      setEditingQuestionIndex(editingQuestionIndex - 1);
+    }
     setFormData(prev => ({
       ...prev,
       questions: prev.questions.filter((_, i) => i !== index)
@@ -532,14 +585,46 @@ const CreateEvaluationTest = ({ testToEdit = null, onClose }) => {
                           <span>Obligatoria: {question.required ? 'Sí' : 'No'}</span>
                         </div>
                       </div>
-                      <button
-                        onClick={() => removeQuestion(index)}
-                        className="text-red-600 hover:text-red-800 transition-colors"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => moveQuestionUp(index)}
+                          disabled={index === 0}
+                          className="text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                          title="Mover arriba"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => moveQuestionDown(index)}
+                          disabled={index === formData.questions.length - 1}
+                          className="text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                          title="Mover abajo"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => handleEditQuestion(index)}
+                          className="text-blue-600 hover:text-blue-800 transition-colors ml-2"
+                          title="Editar"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => removeQuestion(index)}
+                          className="text-red-600 hover:text-red-800 transition-colors ml-2"
+                          title="Eliminar"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                     <div className="space-y-1">
                       {question.options.map((option, optIndex) => (
@@ -669,13 +754,23 @@ const CreateEvaluationTest = ({ testToEdit = null, onClose }) => {
                   </button>
                 </div>
 
-                <button
-                  onClick={addQuestion}
-                  disabled={!currentQuestion.text.trim() || currentQuestion.options.length < 2}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Agregar Pregunta
-                </button>
+                <div className="flex space-x-3">
+                  <button
+                    onClick={addQuestion}
+                    disabled={!currentQuestion.text.trim() || currentQuestion.options.length < 2}
+                    className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {editingQuestionIndex !== null ? 'Guardar Cambios' : 'Agregar Pregunta'}
+                  </button>
+                  {editingQuestionIndex !== null && (
+                    <button
+                      onClick={cancelEditQuestion}
+                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -846,7 +941,12 @@ const CreateEvaluationTest = ({ testToEdit = null, onClose }) => {
             )}
 
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <h4 className="font-medium text-green-900 mb-2">✅ Test listo para guardar</h4>
+              <div className="flex items-center gap-2 mb-2">
+                <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <h4 className="font-medium text-green-900">Test listo para guardar</h4>
+              </div>
               <p className="text-sm text-green-800">
                 El test cumple con todos los requisitos y está listo para ser guardado.
               </p>

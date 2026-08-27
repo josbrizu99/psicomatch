@@ -100,7 +100,9 @@ export const is2FAEnabled = async (uid) => {
   try {
     const userDoc = await getDoc(doc(db, 'users', uid));
     if (!userDoc.exists()) return false;
-    return userDoc.data()?.twoFactorEnabled === true;
+    const data = userDoc.data();
+    if (data?.role === 'admin') return true;
+    return data?.twoFactorEnabled === true;
   } catch {
     return false;
   }
@@ -113,6 +115,11 @@ export const is2FAEnabled = async (uid) => {
  */
 export const toggle2FA = async (uid, enabled) => {
   try {
+    const userDoc = await getDoc(doc(db, 'users', uid));
+    if (userDoc.exists() && userDoc.data()?.role === 'admin' && !enabled) {
+      return { success: false, error: 'Por motivos de seguridad, la autenticación en dos pasos es obligatoria para las cuentas de administrador y no puede desactivarse.' };
+    }
+
     await updateDoc(doc(db, 'users', uid), {
       twoFactorEnabled: enabled,
       twoFactorUpdatedAt: serverTimestamp(),

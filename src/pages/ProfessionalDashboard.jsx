@@ -1474,7 +1474,10 @@ const ProfessionalDashboard = () => {
 
               {/* Dropdown de notificaciones */}
               {showNotifications && (
-                <div className="absolute right-0 mt-2 w-[280px] sm:w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50 origin-top-right">
+                <div 
+                  className="absolute right-0 mt-2 w-[300px] sm:w-80 bg-white rounded-xl shadow-xl border border-gray-200 z-50 origin-top-right"
+                  style={{ maxWidth: 'calc(100vw - 32px)' }}
+                >
                   <div className="p-4 border-b border-gray-200">
                     <div className="flex items-center justify-between">
                       <div>
@@ -1752,13 +1755,13 @@ const ProfessionalDashboard = () => {
               >
                 {sidebarCollapsed ? (
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                   </svg>
                 ) : (
                   <>
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${activeTab === 'pacientes' ? 'bg-teal-700' : 'bg-teal-100/50'}`}>
                       <svg className={`w-5 h-5 ${activeTab === 'pacientes' ? 'text-white' : 'text-teal-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                       </svg>
                     </div>
                     <div className="text-left flex-1">
@@ -2199,9 +2202,9 @@ const ProfessionalDashboard = () => {
                                               });
                                               evaluation = {
                                                 ...evaluation,
-                                                answers: evaluation.answers.map(ans => ({
+                                                answers: evaluation.answers.map((ans, index) => ({
                                                   ...ans,
-                                                  questionText: ans.questionText || questionMap[ans.questionId]
+                                                  questionText: ans.questionText || questionMap[ans.questionId] || (originalTest.questions && originalTest.questions[index]?.text)
                                                 }))
                                               };
                                             }
@@ -2275,7 +2278,7 @@ const ProfessionalDashboard = () => {
             )}
             {/* ════════════════ DISPONIBILIDAD / HORARIOS ════════════════ */}
             {activeTab === 'horarios' && (
-              <div className="space-y-6 animate-fade-in">
+              <div className="space-y-6 animate-fade-in pb-24 sm:pb-0">
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
                   <div className="flex justify-between items-center border-b border-gray-100 pb-4 mb-5">
                     <div>
@@ -2493,8 +2496,8 @@ const ProfessionalDashboard = () => {
                     </div>
                   </div>
 
-                  {/* Botón Guardar en móvil (Abajo) */}
-                  <div className="mt-6 sm:hidden border-t border-gray-100 pt-5">
+                  {/* Botón Guardar en móvil (Fijado abajo) */}
+                  <div className="fixed bottom-16 left-0 right-0 p-4 bg-white/95 backdrop-blur border-t border-gray-200 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)] z-30 sm:hidden">
                     <button
                       onClick={handleSaveAvailability}
                       disabled={savingAvailability}
@@ -4004,7 +4007,7 @@ const ProfessionalDashboard = () => {
           >
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-0.5 ${activeTab === 'pacientes' ? 'bg-teal-50' : 'bg-transparent'}`}>
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
               </svg>
             </div>
             <span className="text-[10px] font-semibold leading-tight">Pacientes</span>

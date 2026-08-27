@@ -182,3 +182,11 @@ export const sendRatingNotification = async ({ professionalEmail, professionalNa
     message: `${userName || 'Un paciente'} te ha calificado con ${rating} estrellas como profesional.`
   });
 };
+
+// Notificar confirmación de registro
+export const sendRegistrationReceivedNotification = async (email, name) => {
+  return callEmailFunction('sendProfessionalRegistrationReceivedEmail', {
+    email,
+    name: name || 'Profesional'
+  });
+};

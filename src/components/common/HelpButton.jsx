@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLocation } from 'react-router-dom';
 import { resetOnboarding } from '../../utils/onboarding';
 import {
     userOnboardingTour,
@@ -12,6 +13,7 @@ import {
 const HelpButton = ({ userType = 'user' }) => {
     const [showMenu, setShowMenu] = React.useState(false);
     const [isVisible, setIsVisible] = React.useState(true);
+    const location = useLocation();
 
     // Ocultar botón al hacer scroll hacia abajo (inverso al ScrollToTopButton)
     React.useEffect(() => {
@@ -42,6 +44,11 @@ const HelpButton = ({ userType = 'user' }) => {
         featureTour(feature);
         setShowMenu(false);
     };
+
+    // Solo mostrar en la landing page
+    if (location.pathname !== '/') {
+        return null;
+    }
 
     if (!isVisible) return null;
 

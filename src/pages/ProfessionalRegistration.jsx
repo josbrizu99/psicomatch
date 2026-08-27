@@ -5,7 +5,7 @@ import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db, functions } from '../firebase/firebase';
 import { httpsCallable } from 'firebase/functions';
 import { useAuth } from '../contexts/AuthContext';
-import { sendProfessionalAccessCode } from '../services/emailService';
+import { sendProfessionalAccessCode, sendRegistrationReceivedNotification } from '../services/emailService';
 import ImageUploader from '../components/common/ImageUploader';
 import { uploadProfessionalProfilePhoto } from '../services/storageService';
 import { logUserAction } from '../services/authService';
@@ -423,6 +423,13 @@ const ProfessionalRegistration = () => {
 
       // Guardar datos en Firestore
       await setDoc(doc(db, 'professionals', user.uid), professionalData);
+
+      // Enviar correo de "Registro Recibido"
+      try {
+        await sendRegistrationReceivedNotification(formData.email.toLowerCase(), formData.fullName || formData.name);
+      } catch (emailErr) {
+        console.error('Error al enviar correo de registro recibido:', emailErr);
+      }
 
       setMessage('¡Registro completado exitosamente! Tu información ha sido enviada para revisión. Recibirás una notificación cuando tu cuenta sea verificada.');
 
