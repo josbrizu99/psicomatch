@@ -6,6 +6,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../firebase/firebase';
 import { toggle2FA, is2FAEnabled } from '../services/twoFactorService';
 import toast from 'react-hot-toast';
+import SuicidalAlert from '../components/user/SuicidalAlert';
 
 const UserSettings = () => {
   const { currentUser, userData, updateUserData, isUserAdmin } = useAuth();
@@ -16,6 +17,7 @@ const UserSettings = () => {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [photoPreview, setPhotoPreview] = useState(null);
+  const [showSuicidalSimulator, setShowSuicidalSimulator] = useState(false);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -301,7 +303,48 @@ const UserSettings = () => {
           </div>
         </div>
 
+        {/* Simulador de Detección de Perfil Suicida */}
+        <div className="bg-red-50 rounded-xl shadow-sm border border-red-100 overflow-hidden mb-10">
+          <div className="px-6 py-6 sm:px-8 sm:py-8">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h2 className="text-lg font-bold text-red-900 mb-2">Simulador — Detección de Perfil Suicida</h2>
+                <div className="space-y-3 text-sm text-red-800 leading-relaxed mb-6">
+                  <p>
+                    El sistema detecta automáticamente respuestas de riesgo suicida durante la evaluación emocional inicial.
+                    Cuando un usuario responde de forma que indica pensamientos suicidas, se interrumpe la evaluación
+                    y se muestra inmediatamente un protocolo de ayuda y contención.
+                  </p>
+                  <p className="font-medium">
+                    Haz clic en el botón de abajo para simular y visualizar cómo se muestra este modal a los usuarios en riesgo.
+                  </p>
+                </div>
+                
+                <button
+                  onClick={() => setShowSuicidalSimulator(true)}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors shadow-sm focus:ring-2 focus:ring-offset-2 focus:ring-red-500 focus:outline-none"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Iniciar Simulación de Protocolo
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
+
+      {showSuicidalSimulator && (
+        <SuicidalAlert onClose={() => setShowSuicidalSimulator(false)} />
+      )}
     </div>
   );
 };

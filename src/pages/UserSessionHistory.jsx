@@ -211,7 +211,7 @@ const UserSessionHistory = () => {
                     </div>
                   </div>
                   
-                  {session.notes && session.notes !== 'none' && session.notes.trim() !== '' && (
+                  {session.sessionType !== 'evaluation' && session.notes && session.notes !== 'none' && session.notes.trim() !== '' && (
                     <div className="mt-4 pt-4 border-t border-gray-200">
                       <p className="text-sm font-medium text-gray-800 mb-2">Observaciones del Profesional:</p>
                       <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md">{session.notes}</p>

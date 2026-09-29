@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { is2FAEnabled } from '../services/twoFactorService';
 import TwoFactorModal from '../components/common/TwoFactorModal';
 import ForgotPasswordModal from '../components/common/ForgotPasswordModal';
+import TermsModal from '../components/common/TermsModal';
 import { logoutUser } from '../services/authService';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/firebase';
@@ -19,6 +20,7 @@ const Login = () => {
   const [pendingUser, setPendingUser] = useState(null);
   const [showResetModal, setShowResetModal] = useState(false);
   const [loginInProgress, setLoginInProgress] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
   const navigate = useNavigate();
   const { isUserAdmin, currentUser, userData, loading: authLoading } = useAuth();
 
@@ -216,6 +218,11 @@ const Login = () => {
         defaultEmail={formData.email}
       />
 
+      <TermsModal
+        isOpen={showTermsModal}
+        onClose={() => setShowTermsModal(false)}
+      />
+
       <div className="min-h-screen bg-gradient-to-br from-surface-off via-primary-50 to-secondary-50 flex items-center justify-center py-8 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
         {/* Decorative blobs */}
         <div className="absolute top-[-10%] left-[-10%] w-64 h-64 sm:w-96 sm:h-96 bg-primary-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-float-slow" />
@@ -296,7 +303,7 @@ const Login = () => {
                 </div>
 
                 {/* Remember / Forgot */}
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between mb-4">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded" disabled={loading || googleLoading} />
                     <span className="text-sm text-gray-700">Recordarme</span>
@@ -360,15 +367,19 @@ const Login = () => {
                 </button>
               </div>
             </div>
-
-            <div className="text-center">
+            
+            <div className="text-center mt-6">
               <p className="text-xs text-gray-500">
-                Al continuar aceptás nuestros{' '}
-                <button type="button" className="text-primary-600 hover:text-primary-500 font-medium">Términos</button>
-                {' '}y{' '}
-                <button type="button" className="text-primary-600 hover:text-primary-500 font-medium">Privacidad</button>
+                <button
+                  type="button"
+                  className="text-primary-600 hover:text-primary-500 font-medium underline underline-offset-2"
+                  onClick={() => setShowTermsModal(true)}
+                >
+                  Consulta las bases y condiciones de la plataforma
+                </button>
               </p>
             </div>
+
           </form>
         </div>
       </div>

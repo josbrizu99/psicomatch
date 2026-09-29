@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import * as XLSX from 'xlsx';
+import XLSXStyle from 'xlsx-js-style';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase/firebase';
 
@@ -40,7 +40,40 @@ const ExportReports = ({ stats }) => {
     }
   };
 
+  // ─── Helper: obtiene especialidades de un profesional ───────────────────
+  // Campos posibles en Firestore (distintos typos históricos):
+  //   specialities (doble i — CAMPO REAL confirmado en ProfessionalRegistration.jsx línea 350)
+  //   specialties  (correcto)
+  //   specialty    (string singular)
+  //   speciality   (typo singular)
+  const getSpecialty = (p) => {
+    const val =
+      p.specialities ||
+      p.specialties  ||
+      p.specialty    ||
+      p.speciality   ||
+      p.Specialities ||
+      p.Specialties  ||
+      null;
+
+    if (Array.isArray(val) && val.length > 0) return val.join(', ');
+    if (typeof val === 'string' && val.trim() !== '') return val;
+    
+    // Fallback: buscar cualquier key que contenga 'special'
+    const keys = Object.keys(p);
+    const specKey = keys.find(k => k.toLowerCase().includes('special'));
+    if (specKey && p[specKey]) {
+      const v = p[specKey];
+      return Array.isArray(v) && v.length > 0 ? v.join(', ') : (typeof v === 'string' ? v : JSON.stringify(v));
+    }
+    
+    // Debugging: return keys as string to see what fields exist
+    return keys.length > 0 ? `KEYS: ${keys.join(', ')}` : 'N/A';
+  };
+
+
   const handleExportPDF = async () => {
+
     try {
       setExporting('pdf');
       const data = await fetchExportData();
@@ -155,9 +188,9 @@ const ExportReports = ({ stats }) => {
       // 3. Professionals Table
       const profsData = data.professionals.slice(0, 20).map(p => [
         p.name || 'Sin nombre',
-        p.specialty || 'N/A',
+        getSpecialty(p),
         p.email || 'N/A',
-        p.verified ? 'Verificado' : 'Pendiente'
+        p.isVerified || p.status === 'active' ? 'Verificado' : (p.status === 'rejected' ? 'Rechazado' : 'Pendiente')
       ]);
       if(profsData.length > 0) {
         y = addTable(
@@ -227,81 +260,245 @@ const ExportReports = ({ stats }) => {
     try {
       setExporting('excel');
       const data = await fetchExportData();
-      const wb = XLSX.utils.book_new();
+      const wb = XLSXStyle.utils.book_new();
 
-      // -- Sheet 1: Resumen
-      const kpis = buildKpiRows();
-      const resumenData = [
-        ['PSICOMATCH — Reporte Estadístico General'],
-        [],
-        ['Fecha de generación:', `${dateStr} ${timeStr}`],
-        [],
-        ['INDICADORES CLAVE'],
-        ['Métrica', 'Valor', 'Descripción'],
-        ...kpis
-      ];
-      const ws1 = XLSX.utils.aoa_to_sheet(resumenData);
-      ws1['!cols'] = [{ wch: 30 }, { wch: 15 }, { wch: 40 }];
-      ws1['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 2 } }];
-      XLSX.utils.book_append_sheet(wb, ws1, 'Resumen');
+      // ── Paleta de colores exacta de la plantilla (Imagen 3) ──────────────
+      const C = {
+        titleFg:    '5B9BD5', // Azul claro/celeste grande para el título
+        subFg:      '595959', // Gris oscuro para subtítulo y texto general
+        colHeadBg:  'A6B9C8', // Gris-azul para cabeceras de columna
+        colHeadFg:  '333333', // Gris muy oscuro para texto de cabeceras
+        rowAlt:     'F2F4F8', // Azul/gris súper claro para filas alternadas
+        rowNorm:    'FFFFFF', // Blanco
+        border:     'D9D9D9', // Gris claro para bordes
+        metaValBg:  'FFFFFF', // Fondo blanco para valores meta
+        metaLblFg:  '595959', // Gris para etiquetas meta
+      };
 
-      // -- Sheet 2: Usuarios
-      const usersSheet = [
-        ['ID', 'Nombre', 'Correo', 'Rol', 'Estado', 'Fecha Registro'],
-        ...data.users.map(u => [
-          u.id,
-          u.name || '',
-          u.email || '',
-          u.role || 'user',
-          u.isActive !== false ? 'Activo' : 'Inactivo',
-          u.createdAt?.toDate ? new Date(u.createdAt.toDate()).toISOString() : ''
-        ])
-      ];
-      const ws2 = XLSX.utils.aoa_to_sheet(usersSheet);
-      ws2['!cols'] = [{ wch: 25 }, { wch: 25 }, { wch: 30 }, { wch: 10 }, { wch: 10 }, { wch: 25 }];
-      XLSX.utils.book_append_sheet(wb, ws2, 'Usuarios');
+      const cell = (v, s = {}) => ({ v, t: typeof v === 'number' ? 'n' : 's', s });
 
-      // -- Sheet 3: Profesionales
-      const profsSheet = [
-        ['ID', 'Nombre', 'Correo', 'Especialidad', 'Verificado', 'Rating'],
-        ...data.professionals.map(p => [
-          p.id,
-          p.name || '',
-          p.email || '',
-          p.specialty || '',
-          p.verified ? 'Sí' : 'No',
-          p.rating || 0
-        ])
-      ];
-      const ws3 = XLSX.utils.aoa_to_sheet(profsSheet);
-      ws3['!cols'] = [{ wch: 25 }, { wch: 25 }, { wch: 30 }, { wch: 20 }, { wch: 10 }, { wch: 10 }];
-      XLSX.utils.book_append_sheet(wb, ws3, 'Profesionales');
+      const borderThin = {
+        top: { style: 'thin', color: { rgb: C.border } },
+        bottom: { style: 'thin', color: { rgb: C.border } },
+        left: { style: 'thin', color: { rgb: C.border } },
+        right: { style: 'thin', color: { rgb: C.border } },
+      };
 
-      // -- Sheet 4: Sesiones
-      const sessionsSheet = [
-        ['ID Sesión', 'ID Paciente', 'Nombre Paciente', 'ID Profesional', 'Nombre Profesional', 'Tipo', 'Estado', 'Fecha Programada', 'Duración (min)'],
-        ...data.sessions.map(s => {
-          let prof = data.professionals.find(p => p.id === s.professionalId);
-          let user = data.users.find(u => u.id === s.userId);
-          return [
-            s.id,
-            s.userId,
-            user ? user.name : '',
-            s.professionalId,
-            prof ? prof.name : '',
-            s.sessionType || 'evaluation',
-            s.status || 'scheduled',
-            s.scheduledDate || '',
-            s.duration || 0
-          ];
-        })
-      ];
-      const ws4 = XLSX.utils.aoa_to_sheet(sessionsSheet);
-      ws4['!cols'] = [{ wch: 25 }, { wch: 25 }, { wch: 20 }, { wch: 25 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
-      XLSX.utils.book_append_sheet(wb, ws4, 'Sesiones');
+      const sTitle = () => ({
+        font: { bold: true, sz: 22, color: { rgb: C.titleFg } },
+        fill: { fgColor: { rgb: C.rowNorm } },
+        alignment: { horizontal: 'left', vertical: 'center' }
+      });
 
-      XLSX.writeFile(wb, `Reporte_PsicoMatch_${fileDate}.xlsx`);
-      toast.success('Excel exportado correctamente');
+      const sSubtitle = () => ({
+        font: { italic: true, sz: 9, color: { rgb: C.subFg } },
+        fill: { fgColor: { rgb: C.rowNorm } },
+        alignment: { horizontal: 'left', vertical: 'center', wrapText: true }
+      });
+
+      const sMetaLabel = (align = 'left') => ({
+        font: { sz: 9, color: { rgb: C.metaLblFg } },
+        fill: { fgColor: { rgb: C.rowNorm } },
+        alignment: { horizontal: align, vertical: 'center' }
+      });
+
+      const sMetaValue = (align = 'left') => ({
+        font: { sz: 10, color: { rgb: '000000' } },
+        fill: { fgColor: { rgb: C.metaValBg } },
+        alignment: { horizontal: align, vertical: 'center' },
+        border: borderThin
+      });
+
+      const sColHead = () => ({
+        font: { bold: true, sz: 9, color: { rgb: C.colHeadFg } },
+        fill: { fgColor: { rgb: C.colHeadBg } },
+        alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+        border: borderThin
+      });
+
+      const sData = (alt = false, align = 'center') => ({
+        font: { sz: 9, color: { rgb: '333333' } },
+        fill: { fgColor: { rgb: alt ? C.rowAlt : C.rowNorm } },
+        alignment: { horizontal: align, vertical: 'center' },
+        border: borderThin
+      });
+
+      // Función para construir una hoja con el diseño exacto de la plantilla
+      const buildTemplateSheet = ({ title, subtitle, metaRight, cols, headers, rows, colWidths }) => {
+        const NCOLS = cols;
+        const ws = {};
+        let r = 0;
+
+        // Fila 0: Título principal
+        ws[XLSXStyle.utils.encode_cell({ r, c: 0 })] = cell(title.toUpperCase(), sTitle());
+        for (let c = 1; c < NCOLS; c++) ws[XLSXStyle.utils.encode_cell({ r, c })] = cell('', sTitle());
+        r++;
+
+        // Fila 1 y 2: Subtítulo
+        ws[XLSXStyle.utils.encode_cell({ r, c: 0 })] = cell(subtitle, sSubtitle());
+        for (let c = 1; c < NCOLS; c++) ws[XLSXStyle.utils.encode_cell({ r, c })] = cell('', sSubtitle());
+        r++; r++; // Dejar una fila vacía extra
+
+        // Fila 3 y 4: Meta info (Izquierda: Generado por, Fecha / Derecha: Total Registros, etc)
+        // Etiquetas
+        ws[XLSXStyle.utils.encode_cell({ r, c: 0 })] = cell('GENERADO POR', sMetaLabel('left'));
+        ws[XLSXStyle.utils.encode_cell({ r, c: 1 })] = cell('FECHA', sMetaLabel('center'));
+        
+        // Metas de la derecha (alineadas a la derecha)
+        let rightCol = NCOLS - 2;
+        if (metaRight && metaRight.length > 0) {
+          metaRight.forEach((m, idx) => {
+            ws[XLSXStyle.utils.encode_cell({ r: r + idx, c: rightCol })] = cell(m.label, sMetaLabel('right'));
+            ws[XLSXStyle.utils.encode_cell({ r: r + idx, c: rightCol + 1 })] = cell(m.value, sMetaValue('right'));
+          });
+        }
+        r++;
+
+        // Valores
+        ws[XLSXStyle.utils.encode_cell({ r, c: 0 })] = cell('Sistema PsicoMatch', sMetaValue('left'));
+        ws[XLSXStyle.utils.encode_cell({ r, c: 1 })] = cell(`${dateStr} ${timeStr}`, sMetaValue('center'));
+        
+        r++; r++; // Espacio antes de la tabla
+
+        // Cabeceras de la tabla
+        headers.forEach((h, c) => {
+          ws[XLSXStyle.utils.encode_cell({ r, c })] = cell(h, sColHead());
+        });
+        const headerRow = r;
+        r++;
+
+        // Filas de datos
+        // Rellenar hasta 15 filas mínimo para mantener la estética si hay pocos datos
+        const totalRows = Math.max(rows.length, 15);
+        for (let i = 0; i < totalRows; i++) {
+          const alt = i % 2 === 1;
+          const rowData = rows[i] || Array(NCOLS).fill('-');
+          
+          rowData.forEach((v, c) => {
+            // Alinear texto a la izquierda en columnas de nombres/emails, centrar el resto
+            const align = (c === 2 || c === 3 || c === 4) && v !== '-' ? 'left' : 'center';
+            ws[XLSXStyle.utils.encode_cell({ r, c })] = cell(v, sData(alt, align));
+          });
+          r++;
+        }
+
+        // Merges necesarios para el título y subtítulo
+        ws['!merges'] = [
+          { s: { r: 0, c: 0 }, e: { r: 0, c: NCOLS - 1 } }, // Título
+          { s: { r: 1, c: 0 }, e: { r: 1, c: NCOLS - 1 } }, // Subtítulo
+        ];
+
+        ws['!ref'] = XLSXStyle.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: r - 1, c: NCOLS - 1 } });
+        ws['!cols'] = colWidths.map(wch => ({ wch }));
+        ws['!rows'] = [
+          { hpt: 35 }, // Título grande
+          { hpt: 15 }, // Subtítulo
+          { hpt: 10 }, // Espacio
+          { hpt: 15 }, // Meta etiquetas
+          { hpt: 20 }, // Meta valores
+          { hpt: 10 }, // Espacio
+          { hpt: 25 }, // Cabeceras de tabla
+        ];
+
+        return ws;
+      };
+
+      // ═══════════════════════════════════════════════════════════
+      // HOJA 1 — PROFESIONALES (Con diseño exacto de la plantilla)
+      // ═══════════════════════════════════════════════════════════
+      const verifiedCount = data.professionals.filter(p => p.isVerified || p.status === 'active').length;
+      
+      const profsRows = data.professionals.map((p, i) => ([
+        i + 1, 
+        p.id || '-', 
+        p.name || 'Sin nombre', 
+        p.email || 'N/A',
+        getSpecialty(p),
+        p.isVerified || p.status === 'active' ? 'Verificado' : (p.status === 'rejected' ? 'Rechazado' : 'Pendiente'),
+        p.rating ? Number(p.rating).toFixed(2) : '0.00'
+      ]));
+
+      const wsProfs = buildTemplateSheet({
+        title: 'PLANTILLA DE INFORME DE PROFESIONALES REGISTRADOS',
+        subtitle: 'Ingrese los datos en la pestaña correspondiente. El sistema calculará los totales automáticamente basándose en los registros de la base de datos de PsicoMatch.',
+        metaRight: [
+          { label: 'TOTAL PROFESIONALES', value: data.professionals.length },
+          { label: 'PROFESIONALES VERIFICADOS', value: verifiedCount }
+        ],
+        cols: 7,
+        headers: ['N.º DE REGISTRO', 'ID DE USUARIO', 'NOMBRE DEL PROFESIONAL', 'CORREO ELECTRÓNICO', 'ESPECIALIDAD', 'ESTADO', 'RATING'],
+        rows: profsRows,
+        colWidths: [15, 25, 30, 35, 35, 15, 12]
+      });
+      XLSXStyle.utils.book_append_sheet(wb, wsProfs, 'Profesionales');
+
+      // ═══════════════════════════════════════════════════════════
+      // HOJA 2 — SESIONES
+      // ═══════════════════════════════════════════════════════════
+      const completedCount = data.sessions.filter(s => s.status === 'completed').length;
+      
+      const sessionsRows = data.sessions.map((s, i) => {
+        const prof = data.professionals.find(p => p.id === s.professionalId);
+        const user = data.users.find(u => u.id === s.userId);
+        const estado = s.status === 'completed' ? 'Completada' : s.status === 'scheduled' ? 'Programada' : s.status === 'cancelled' ? 'Cancelada' : (s.status || '-');
+        
+        return [
+          i + 1,
+          s.id || '-',
+          user ? (user.name || '-') : (s.userId || '-'),
+          prof ? (prof.name || '-') : (s.professionalId || '-'),
+          s.sessionType || 'Evaluación',
+          estado,
+          s.scheduledDate || '-',
+          s.duration ? `${s.duration} min` : '-'
+        ];
+      });
+
+      const wsSessions = buildTemplateSheet({
+        title: 'PLANTILLA DE INFORME DE SESIONES BÁSICAS',
+        subtitle: 'El reporte muestra el historial detallado de las sesiones programadas, completadas o canceladas en la plataforma.',
+        metaRight: [
+          { label: 'TOTAL DE SESIONES', value: data.sessions.length },
+          { label: 'SESIONES COMPLETADAS', value: completedCount }
+        ],
+        cols: 8,
+        headers: ['N.º DE SESIÓN', 'ID DE SESIÓN', 'PACIENTE', 'PROFESIONAL', 'TIPO DE SESIÓN', 'ESTADO', 'FECHA PROGRAMADA', 'DURACIÓN'],
+        rows: sessionsRows,
+        colWidths: [15, 25, 25, 25, 20, 15, 20, 15]
+      });
+      XLSXStyle.utils.book_append_sheet(wb, wsSessions, 'Sesiones');
+
+      // ═══════════════════════════════════════════════════════════
+      // HOJA 3 — USUARIOS
+      // ═══════════════════════════════════════════════════════════
+      const activeUsersCount = data.users.filter(u => u.isActive !== false).length;
+      
+      const usersRows = data.users.map((u, i) => [
+        i + 1,
+        u.id || '-',
+        u.name || 'Sin nombre',
+        u.email || 'N/A',
+        u.role === 'admin' ? 'Administrador' : 'Paciente',
+        u.isActive !== false ? 'Activo' : 'Inactivo',
+        u.createdAt?.toDate ? new Date(u.createdAt.toDate()).toLocaleDateString('es-ES') : '-'
+      ]);
+
+      const wsUsers = buildTemplateSheet({
+        title: 'PLANTILLA DE INFORME DE USUARIOS PACIENTES',
+        subtitle: 'Lista exhaustiva de pacientes registrados en la plataforma, indicando su estado actual.',
+        metaRight: [
+          { label: 'TOTAL DE USUARIOS', value: data.users.length },
+          { label: 'USUARIOS ACTIVOS', value: activeUsersCount }
+        ],
+        cols: 7,
+        headers: ['N.º DE REGISTRO', 'ID DE USUARIO', 'NOMBRE DEL USUARIO', 'CORREO ELECTRÓNICO', 'ROL', 'ESTADO', 'FECHA DE REGISTRO'],
+        rows: usersRows,
+        colWidths: [15, 25, 30, 35, 15, 15, 20]
+      });
+      XLSXStyle.utils.book_append_sheet(wb, wsUsers, 'Usuarios');
+
+      XLSXStyle.writeFile(wb, `Reporte_PsicoMatch_${fileDate}.xlsx`);
+      toast.success('Excel exportado con la plantilla oficial');
     } catch (error) {
       console.error('Error exportando Excel:', error);
       toast.error('Error al generar el Excel');

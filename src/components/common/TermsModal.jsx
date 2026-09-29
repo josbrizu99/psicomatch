@@ -33,7 +33,7 @@ const TermsModal = ({ isOpen, onClose, onAccept }) => {
             </div>
             <div>
               <h2 className="text-lg font-bold text-gray-900">Términos y Condiciones</h2>
-              <p className="text-xs text-gray-500">PsicoMatch · Última actualización: Julio 2025</p>
+              <p className="text-xs text-gray-500">PsicoMatch · Última actualización: Septiembre 2026</p>
             </div>
           </div>
           <button
@@ -145,11 +145,48 @@ const TermsModal = ({ isOpen, onClose, onAccept }) => {
           </section>
 
           <section>
-            <h3 className="font-semibold text-gray-900 text-base mb-2">10. Jurisdicción</h3>
+            <h3 className="font-semibold text-gray-900 text-base mb-2">10. Uso por Menores de Edad</h3>
+            <p>
+              El uso de la plataforma por parte de menores de 18 años queda bajo la <strong>absoluta responsabilidad de sus padres o tutores legales</strong>. PsicoMatch se deslinda de cualquier responsabilidad derivada del uso no supervisado del servicio por parte de menores. Al registrar a un menor o permitirle el uso de la plataforma, el padre o tutor asume plenamente la responsabilidad de supervisar las interacciones, sesiones y decisiones terapéuticas correspondientes.
+            </p>
+          </section>
+
+          <section>
+            <h3 className="font-semibold text-gray-900 text-base mb-2">11. Jurisdicción</h3>
             <p>
               Estos términos se rigen por las leyes de la República del Paraguay. Cualquier disputa que
               surja en relación a estos términos será sometida a la jurisdicción de los tribunales competentes
               de la República del Paraguay.
+            </p>
+          </section>
+
+          <section className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+            <h3 className="font-semibold text-amber-900 text-base mb-2 flex items-center gap-2">
+              <svg className="w-4 h-4 text-amber-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+              11. Deslinde de Responsabilidad — Menores de 18 Años
+            </h3>
+            <p className="text-amber-800 mb-3">
+              <strong>PsicoMatch está diseñado para personas mayores de 18 años.</strong> Si un menor de edad utiliza
+              la plataforma, ya sea con o sin conocimiento de sus representantes legales, la responsabilidad sobre
+              dicho uso recae <strong>exclusivamente y en su totalidad</strong> sobre los padres, tutores o
+              representantes legales del menor.
+            </p>
+            <ul className="list-disc list-inside space-y-1 pl-2 text-amber-800 text-sm">
+              <li>PsicoMatch no verifica la edad de los usuarios al momento del registro.</li>
+              <li>Los padres o tutores son los únicos responsables de supervisar el uso de internet y plataformas
+                  digitales de salud por parte de sus hijos o pupilos menores de edad.</li>
+              <li>Cualquier consecuencia derivada del uso de la plataforma por parte de un menor —incluyendo
+                  la recepción de contenido relacionado con salud mental, resultados de evaluaciones o
+                  comunicación con profesionales— es de responsabilidad exclusiva del adulto a cargo.</li>
+              <li>En caso de detectarse que un usuario es menor de 18 años, PsicoMatch se reserva el derecho
+                  de suspender o eliminar su cuenta sin previo aviso.</li>
+            </ul>
+            <p className="text-amber-700 text-xs mt-3 font-medium">
+              Al aceptar estos Términos y Condiciones, el usuario declara ser mayor de 18 años o, en su defecto,
+              confirma contar con autorización expresa de su padre, madre o tutor legal, quien asume plena
+              responsabilidad por el uso de la plataforma.
             </p>
           </section>
 
